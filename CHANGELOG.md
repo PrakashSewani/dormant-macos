@@ -8,5 +8,5 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
-- Repository scaffold from the `template-app-plus-site` template (docs-first skeleton; stack
+- Repository scaffold from the `dormant-macos` template (docs-first skeleton; stack
   chosen at bootstrap).

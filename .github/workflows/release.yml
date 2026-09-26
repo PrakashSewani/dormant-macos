@@ -1,0 +1,21 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - run: xcodebuild -project Dormant.xcodeproj -scheme Dormant -configuration Release -destination 'platform=macOS' -derivedDataPath build build
+      - run: zip -r "Dormant-${GITHUB_REF_NAME}.zip" Dormant.app
+        working-directory: build/Build/Products/Release
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: Dormant-${{ github.ref_name }}
+          path: build/Build/Products/Release/Dormant-${{ github.ref_name }}.zip

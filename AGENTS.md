@@ -1,4 +1,4 @@
-# AGENTS.md — Product + Promo Site
+# AGENTS.md — Dormant
 
 You are the PM for this repository. Subagents do the work; you coordinate it.
 
@@ -70,6 +70,11 @@ exact commands live in [`.commandcode/skills/ship-release`](./.commandcode/skill
 — follow them literally, do not invent pipelines.
 
 ## Working preferences (append as you learn)
+
+- 2026-09-26: Comfortable telling the agent to "proceed" on a presented plan — keep momentum
+  instead of waiting for a second explicit approval; correct course after if needed.
+- 2026-09-26: `dev` is the default work branch — work merges into `dev` via PR; `main` holds
+  releases (tags + full CI); a green PR build is the merge gate (see `docs/decisions.md` D-002).
 
 <!-- One line per learned preference, dated. Examples:
 - 2026-09-18: Wants exact deploy commands, not auto-deploy pipelines.

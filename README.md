@@ -1,4 +1,4 @@
-# Product + Promo Site
+# Dormant
 
 One repository for a product **and its promo site** — the thing people use, and the site that
 explains it and sends them to it. No tech stack is baked in: the stack is chosen when the
@@ -9,11 +9,11 @@ project's requirements are known.
 1. **Create the repo** — "Use this template → Create a new repository" on GitHub, or locally:
 
    ```powershell
-   .\scripts\new-project.ps1 -Template template-app-plus-site -Name my-product -Title "My Product"
+   .\scripts\new-project.ps1 -Template dormant-macos -Name my-product -Title "My Product"
    ```
 
    ```bash
-   bash scripts/new-project.sh template-app-plus-site my-product "My Product"
+   bash scripts/new-project.sh dormant-macos my-product "My Product"
    ```
 
 2. **Rename** (skip if you used the script above):
