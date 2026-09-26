@@ -17,6 +17,9 @@ targets:
     platform: macOS
     sources:
       - Sources/DormantCore
+    settings:
+      base:
+        OTHER_LDFLAGS: -lsqlite3
   DormantCoreTests:
     type: bundle.unit-test
     platform: macOS
