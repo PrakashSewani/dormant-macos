@@ -31,6 +31,7 @@ check command regenerates it.
 | `xcodebuild -project Dormant.xcodeproj -scheme Dormant -configuration Release -destination 'platform=macOS' -derivedDataPath build build` | Release build — the artifact `release.yml` zips. |
 | `npm run build --prefix site` | Build the promo site into `site/_site/` (also step 5 of the check). |
 | `npm start --prefix site` | Eleventy dev server with live reload at <http://localhost:8080/>. |
+| `swift Scripts/render-icons.swift` | Regenerate every icon size (app icon set, site favicons) from the mark drawn in the script (D-013). |
 
 Raw `xcodebuild` commands assume `xcode-select` points at Xcode (see Setup). `Scripts/check.sh`
 locates `Xcode.app` itself when it doesn't.
@@ -66,4 +67,4 @@ changelog section, commits, tags `v<version>`, and publishes the GitHub release 
 | `xcodegen: command not found` | `brew install xcodegen` |
 | `node: command not found` when running the check | Install Node.js 18+ (the site build is step 5 of the check). |
 | `eleventy: command not found` when building the site | Your npm env omits dev dependencies (`NODE_ENV=production`); install with `npm ci --include=dev --prefix site`. |
-| The "Dormant ▸" Finder menu doesn't appear | Launch the app once, then enable the extension in System Settings → Extensions (Finder Extensions) and relaunch Finder. Ad-hoc-signed local builds may need a one-time approval. |
+| The "Dormant ▸" Finder menu doesn't appear (anywhere) | First confirm the extension is registered: `pluginkit -mAvvv -p com.apple.FinderSync` must list `com.dormant.Dormant.Finder`. If it doesn't, `pkd` rejected it — read why with `log show --last 10m --predicate 'processImagePath CONTAINS "pkd"' --info` (a "plug-ins must be sandboxed" line means the appex lost its App Sandbox entitlement, see D-011). If it is listed, launch the app once, then enable the extension in System Settings → Extensions (Finder Extensions) and relaunch Finder. Ad-hoc-signed local builds may need a one-time approval. Note: Finder Sync shows the submenu inside monitored directories (`directoryURLs` is `/`, so anywhere in the file system), not on Desktop icons while Finder's Desktop is iCloud-synced. |

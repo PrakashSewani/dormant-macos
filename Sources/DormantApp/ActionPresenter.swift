@@ -15,6 +15,7 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
   func present(action: DormantAction, fileURL: URL) {
     switch action {
     case .open:
+      Task { _ = await resolveRecord(for: fileURL) }
       open(fileURL)
     case .clean:
       startClean(fileURL)
@@ -31,6 +32,7 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
 
   private func startClean(_ root: URL) {
     Task {
+      _ = await resolveRecord(for: root)
       let plan = await Task.detached { CleanEngine().plan(root: root) }.value
       guard !plan.items.isEmpty else {
         showAlert(
@@ -129,7 +131,7 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
 
   private func startRestore(_ fileURL: URL) {
     Task {
-      guard let record = findRecord(path: fileURL.path) else {
+      guard let record = await resolveRecord(for: fileURL) else {
         showAlert(
           title: "Unknown project",
           message: "There is no Dormant registry entry for \(fileURL.path)."
@@ -194,6 +196,7 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
 
   private func startProjectInfo(_ fileURL: URL) {
     Task {
+      _ = await resolveRecord(for: fileURL)
       let info = await Task.detached { ProjectInfo.load(path: fileURL.path) }.value
       showDialog(title: "Project Info") {
         ProjectInfoView(info: info, onClose: { self.closeDialog() })
@@ -266,9 +269,16 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
     return URL(string: text)
   }
 
-  private func findRecord(path: String) -> ProjectRecord? {
-    guard let registry = try? Registry(path: DormantPaths().registry) else { return nil }
-    return try? registry.project(path: path)
+  private func resolveRecord(for fileURL: URL) async -> ProjectRecord? {
+    let record = await Task.detached { () -> ProjectRecord? in
+      guard let registry = try? Registry(path: DormantPaths().registry) else { return nil }
+      if let registered = try? Scanner(registry: registry).register(projectAt: fileURL) {
+        return registered
+      }
+      return try? registry.project(path: fileURL.path)
+    }.value
+    NotificationCenter.default.post(name: .dormantDataChanged, object: nil)
+    return record
   }
 
   private func archiveRow(for record: ProjectRecord) throws -> ArchiveRecord? {

@@ -41,7 +41,11 @@ struct CleanPreviewDialog: View {
       onCancel: onCancel
     ) {
       VStack(alignment: .leading, spacing: 8) {
-        Text("These regenerable paths will be removed. Everything else is kept:")
+        Text("These regenerable paths will be removed permanently — nothing is archived. Everything else is kept:")
+          .fixedSize(horizontal: false, vertical: true)
+        Text("To make the project work again afterwards, rebuild this state with its own dependency commands (for example cargo build or npm install).")
+          .font(.caption)
+          .foregroundStyle(.secondary)
           .fixedSize(horizontal: false, vertical: true)
         ScrollView {
           VStack(alignment: .leading, spacing: 4) {

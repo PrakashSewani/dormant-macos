@@ -15,42 +15,33 @@ rule 4. Keep exactly one phase `in progress`.
 
 ## Current handoff
 
-- **Phase:** 4 — launch. Phase 3 (promo site) is implemented, checked and green.
-- **Done this session (phase 3):** site stack chosen with the human and recorded first — **D-009**
-  (Eleventy 3.1.6, resolved live via `npm view`, Nunjucks → static `site/_site/`, zero client JS,
-  lockfile committed); `site/` scaffolded (`package.json`, `eleventy.config.js`, `src/index.njk`,
-  `src/_includes/base.njk`, `src/styles.css`); the one-page promo built to `docs/product.md`
-  (the promise, a workspace size-receipt proof object, Clean/Archive/Restore with their safety
-  notes, the install-command preview, the "rules Dormant will not break", download CTA to GitHub
-  Releases); design pass in a storage-ledger direction (warm paper, serif display, mono data,
-  hibernate/wake color roles) verified in a real browser at 1280×800 and 390×844, with the accent
-  darkened from 4.3:1 to 5.3:1 contrast after the check; `Scripts/check.sh` gained step 5 (the
-  site build) and CI runs exactly it, so no workflow change was needed; docs updated
-  (`architecture.md` shape/components/check spec, `development.md` prerequisites/setup/commands/
-  troubleshooting). Gotcha handled and documented: this machine's npm omits dev dependencies
-  (`NODE_ENV=production`, `omit=dev`), so site installs use `npm ci --include=dev`.
-- **Verified:** `Scripts/check.sh` end to end on the final tree — lint clean, build OK, **89 tests
-  / 12 suites pass**, and `npm ci --include=dev && npm run build` writes `site/_site/index.html`
-  and `styles.css`. Design verified from full-page screenshots at 1280×800 and 390×844 (hero wrap
-  fixed after the first look; layout stacks cleanly on mobile).
-- **Landing:** this work is committed on `feature/phase-3-promo-site` and opened as a PR to `dev`
-  (merge via PR per D-007).
-- **Blocked by:** (1) the manual Finder round trip on a real project (enable the extension in
-  System Settings → Extensions, relaunch Finder; see `docs/development.md` troubleshooting);
-  (2) human-only GitHub settings for D-007: create the `release:patch` / `release:minor` /
-  `release:major` labels and make `dev` the default branch with required-PR protection.
-- **Done this session (phase 3 polish + distribution plan):** footer styling fixed (it had been
-  left unstyled and broke out of the content column; reproduced and verified in a Brave session
-  via agent-browser CDP, hairline alignment corrected after a first pass); **D-010** recorded —
-  distribution via our own Homebrew tap `PrakashSewani/homebrew-tap` with **no Apple Developer
-  Program** (the human rejected the paid route); `homebrew/cask` submission explicitly deferred
-  (Gatekeeper + notability bars, revisit only as its own decision); `ship-release` gained the tap
-  publish procedure with the cask template (safe `zap`: never `~/.dormant`) and the GitHub Pages
-  site-deploy procedure; README + promo site now carry the install command and the first-launch
-  Gatekeeper note; the tap repo `PrakashSewani/homebrew-tap` was created.
-- **Next action (new session):** merge the phase 3 PR into `dev`, then phase 4: the release PR
-  from `dev` to `main` with one `release:*` label (ship-release skill) → run the tap publish
-  procedure → manual site deploy when the human asks.
+- **Phase:** 4 — launch. Phase 3 (promo site) is merged to `dev` (PR #3).
+- **Done this session:** (1) **D-011** — root-caused the invisible "Dormant ▸" Finder menu: `pkd`
+  rejected the appex ("plug-ins must be sandboxed"), so it was never registered anywhere.
+  `DormantFinder` now carries App Sandbox (new `DormantFinder.entitlements` + `project.yml`
+  wiring); the app stays unsandboxed. Extension display name fixed to "Dormant" (was
+  "DormantFinder"), so the Finder submenu reads "Dormant ▸". (2) **D-012** — Clean stays one-way
+  (the human's choice over a rebuild path): every Finder/app action now registers its project in
+  the registry (`ActionPresenter.resolveRecord`), fixing "no entry in the app" after a Finder Clean;
+  the Clean preview states the removal is permanent and that development state is rebuilt with the
+  project's own dependency commands; Restore stays archive-only. (3) Site: "Coming soon for macOS"
+  CTAs replace the download buttons and the brew line keeps its command with a disabled Copy
+  button plus a "Not published yet" note (still zero client JS).
+- **Verified:** `Scripts/check.sh` end to end — lint clean, build OK, **89 tests / 12 suites pass**,
+  site builds. Rebuilt Debug appex carries exactly `app-sandbox` + Debug `get-task-allow`;
+  `pluginkit -mAvvv -p com.apple.FinderSync` lists exactly one `com.dormant.Dormant.Finder`
+  ("Display Name = Dormant"). Live Finder test: Clean on `dev-rig` removed `target/` (524K left).
+  Not verified: CLI `open dormant://…` did not reach the running app (Finder's `NSWorkspace`
+  delivery does work — the human's Finder Clean ran through it); note as a possible follow-up.
+- **Landing:** `feature/finder-menu-and-coming-soon` → PR → `dev` (D-007), merged this session.
+- **Blocked by:** (1) the manual Finder round trip on the fixed extension (enable in System
+  Settings → Extensions (Finder Extensions), relaunch Finder, right-click a project folder);
+  (2) human-only GitHub settings for D-007: the `release:patch` / `release:minor` /
+  `release:major` labels and `dev` as default branch with required-PR protection.
+- **Next action (new session):** take the Finder round-trip confirmation, then the release PR from
+  `dev` to `main` with one `release:*` label (ship-release skill) → tap publish procedure → manual
+  site deploy when the human asks. When the first release ships, flip the site from "coming soon"
+  to real download links and enable the brew command copy.
 
 ---
 
