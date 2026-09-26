@@ -378,9 +378,10 @@ README).
 
 **Decision:**
 
-- **Mark:** a paper (`#f4f1e8`) crescent moon — a circle with an elliptical terminator bitten out,
-  centered by its bounding box — on a hibernate (`#3c5a43` → `#213427`) squircle. One idea, no
-  ornament; readable down to 16px.
+- **Mark:** two circles — a paper (`#f4f1e8`) disc with an offset circular hole (a tapering
+  ring), centered by its bounding box — on a hibernate (`#3c5a43` → `#213427`) squircle. The first
+  mark, cleaned up: no spark, no seam. A crescent moon was tried and rejected (reads as the
+  Pakistan flag crescent); one idea, no ornament; readable down to 16px.
 - **One source, script-rendered:** `Scripts/render-icons.swift` (AppKit/CoreGraphics, no
   dependencies) draws the mark and writes every raster size. The design lives in the script; no
   binary master file.
@@ -399,8 +400,9 @@ README).
 
 - **A binary design file (`.sketch`/`.figma`) as master** — nothing in the repo could regenerate
   sizes from it; the script is the master.
-- **A folder/archive glyph** — too busy at favicon sizes; the moon carries the "put it to sleep"
-  promise alone.
+- **A folder/archive glyph** — too busy at favicon sizes; the eclipse carries the "project going
+  to sleep" promise alone.
+- **A crescent moon** — tested and cut: reads as the Pakistan flag crescent at icon sizes.
 
 **Cost / risk:** the design is code — visual tweaks mean editing the script and re-running it
 (`swift Scripts/render-icons.swift`); every raster size and the favicon SVG regenerate from that

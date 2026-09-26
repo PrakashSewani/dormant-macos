@@ -6,8 +6,8 @@
     </linearGradient>
     <mask id="moon">
       <rect width="64" height="64" fill="black"/>
-      <circle cx="41.44" cy="32.00" r="23.04" fill="white"/>
-      <ellipse cx="51.04" cy="32.00" rx="17.92" ry="23.68" fill="black"/>
+      <circle cx="32.00" cy="32.00" r="21.76" fill="white"/>
+      <ellipse cx="33.28" cy="30.72" rx="16.00" ry="16.00" fill="black"/>
     </mask>
   </defs>
   <rect width="64" height="64" rx="14.08" fill="url(#plate)"/>

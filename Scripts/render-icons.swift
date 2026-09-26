@@ -9,10 +9,11 @@ let plateTop = NSColor(srgbRed: 0.2353, green: 0.3529, blue: 0.2627, alpha: 1)
 let plateBottom = NSColor(srgbRed: 0.1294, green: 0.2039, blue: 0.1529, alpha: 1)
 
 // Mark geometry in unit space (y measured from the top), before centering.
-let moonRadius = 0.36
-let terminatorSemi = (x: 0.28, y: 0.37)
-var moonCenter = (x: 0.46, y: 0.50)
-var terminatorCenter = (x: 0.61, y: 0.50)
+// Two circles, like the first mark: a paper disc with an offset circular hole (eccentric ring).
+let moonRadius = 0.34
+let terminatorSemi = (x: 0.25, y: 0.25)
+var moonCenter = (x: 0.50, y: 0.51)
+var terminatorCenter = (x: 0.52, y: 0.49)
 
 func inMoon(_ x: Double, _ y: Double) -> Bool {
   let dc = (x - moonCenter.x) * (x - moonCenter.x) + (y - moonCenter.y) * (y - moonCenter.y)
@@ -83,7 +84,7 @@ func render(size: Int, variant: Variant) -> NSBitmapImageRep {
     NSPoint(x: origin + CGFloat(x) * side, y: origin + (1 - CGFloat(y)) * side)
   }
 
-  // Crescent moon: paper circle with the elliptical terminator cleared out
+  // Eclipse ring: paper disc with an offset circular bite cleared out
   // in a transparency layer, so edges stay clean over the plate gradient.
   NSGraphicsContext.saveGraphicsState()
   plate.addClip()
