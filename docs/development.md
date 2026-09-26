@@ -37,12 +37,22 @@ locates `Xcode.app` itself when it doesn't.
 
 No env vars, no secrets, no config files. `Scripts/check.sh` exports
 `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` when `xcode-select` still points at the
-Command Line Tools. The app keeps its data in `~/.dormant/` (created on first use, phase 2).
+Command Line Tools. The app keeps its data in `~/.dormant/` (created on first use).
 
 ## Releases and deploys
 
-Manual by policy — the exact commands live in
-[`.commandcode/skills/ship-release/SKILL.md`](../.commandcode/skills/ship-release/SKILL.md).
+Create release PRs from `dev` to `main` and apply exactly one release label:
+`release:patch`, `release:minor`, or `release:major`. After merge, release automation runs only
+from `main`, updates `MARKETING_VERSION` in `project.yml` and `CHANGELOG.md`, creates a matching
+`v<version>` tag, and publishes a GitHub release. Merges without a release label do not publish a
+release (`docs/decisions.md` D-007). Product and site deployments remain manual; see
+[`.commandcode/skills/ship-release/SKILL.md`](../.commandcode/skills/ship-release/SKILL.md) for
+the project-specific procedure.
+
+Implemented by `.github/workflows/release.yml` (reworked 2026-09-26 from the tag trigger to the
+labeled-merge flow): on merge it bumps `MARKETING_VERSION`, promotes the `[Unreleased]`
+changelog section, commits, tags `v<version>`, and publishes the GitHub release with
+`Dormant-v<version>.zip`. An unlabeled or multiply-labeled merge publishes nothing.
 
 ## Troubleshooting
 

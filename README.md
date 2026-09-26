@@ -1,48 +1,60 @@
 # Dormant
 
-One repository for a product **and its promo site** — the thing people use, and the site that
-explains it and sends them to it. No tech stack is baked in: the stack is chosen when the
-project's requirements are known.
+A macOS developer utility for managing the lifecycle of project workspaces: clean, archive, and
+restore local projects without losing your repositories.
 
-## Getting started
+**The repository is permanent, the local development environment is disposable.** Clean what can
+be regenerated. Keep what matters. Put unused projects to sleep. Wake them when you need them.
 
-1. **Create the repo** — "Use this template → Create a new repository" on GitHub, or locally:
+## What it does
 
-   ```powershell
-   .\scripts\new-project.ps1 -Template dormant-macos -Name my-product -Title "My Product"
-   ```
+From the Finder "Dormant ▸" context menu on a project folder (and the menu bar app):
 
-   ```bash
-   bash scripts/new-project.sh dormant-macos my-product "My Product"
-   ```
+- **Open** — launch the project in your configured editor command (falls back to opening the
+  folder).
+- **Clean** — remove regenerable development state (`node_modules`, `target`, `.venv`, build
+  output, caches) after a preview with per-path sizes. Never removes anything it cannot
+  confidently classify as regenerable.
+- **Archive** — warn about uncommitted changes, clean regenerable state, compress everything that
+  remains into `~/.dormant/store/`, and remove the working copy only after the archive is
+  verified. The repository itself is never deleted.
+- **Restore** — decompress to the original path (or one you choose), verify every file against
+  the manifest checksums, then show the detected dependency install commands and run them only
+  after you confirm.
+- **Project Info** — why a project is consuming disk: sizes, git state, remote, last commit.
+- **Open Repository** — open the project's git remote in the browser.
 
-2. **Rename** (skip if you used the script above):
+Local-first: no accounts, no telemetry, nothing leaves your Mac. The full brief is in
+[`docs/product.md`](docs/product.md).
 
-   ```bash
-   node scripts/init.mjs --name my-product --title "My Product"
-   ```
+## Status
 
-3. **Bootstrap it.** Open an AI session in the repo, describe your product in plain words, then
-   say *"bootstrap this project"*. The agent follows `AGENTS.md` and the `project-bootstrap`
-   skill: it asks the questions that matter, picks the smallest stack that fits, resolves current
-   package versions **live**, records the decision in `docs/`, and scaffolds the repo — product
-   and site side by side.
+Phase 2 (the core workflow) is implemented and tested; nothing is released yet. The current
+phase and handoff live in [`docs/status.md`](docs/status.md).
 
-## What's in here
+## Development
 
-- `AGENTS.md` — the four rules, the PM/subagent model, and the no-stack-assumed workflow.
-- `docs/` — `product.md` (the brief), `architecture.md`, `decisions.md`, `status.md`,
-  `development.md`.
-- `.commandcode/agents/` — `implementer`, `verifier`, `docs-writer`.
-- `.commandcode/skills/` — `project-bootstrap` (choose + scaffold the stack), `ship-release`.
-- `scripts/init.mjs` — renames the template once; delete it after.
+Swift / Xcode — prerequisites and exact commands in
+[`docs/development.md`](docs/development.md). The gate is `Scripts/check.sh` (lint → generate →
+build → test); it must pass before anything is "done".
 
-## Why nothing is pinned
+## Releases
 
-Templates that ship a pinned stack go stale in weeks and force yesterday's tools onto today's
-project. This template ships the **shape** — one repo, product + site, docs-first, PM + subagents
-— and leaves the stack to be decided with you at project start, with versions resolved on that
-day. The version numbers in `examples/` (if present) are reference implementations, not advice.
+Release PRs from `dev` to `main` carry exactly one `release:patch`, `release:minor`, or
+`release:major` label; the release workflow bumps the version, tags `v<version>`, and publishes
+the GitHub release. Product and site deployments stay manual. See
+[`docs/development.md`](docs/development.md) and
+[`.commandcode/skills/ship-release/SKILL.md`](.commandcode/skills/ship-release/SKILL.md).
+
+## Repository docs
+
+- [`docs/product.md`](docs/product.md) — the brief and the safety rules
+- [`docs/architecture.md`](docs/architecture.md) — components, data flow, safety invariants
+- [`docs/decisions.md`](docs/decisions.md) — settled decisions (stack, release flow, safety)
+- [`docs/status.md`](docs/status.md) — phase tracker and handoff
+- [`docs/development.md`](docs/development.md) — setup and commands
+
+Scaffolded from the `template-app-plus-site` repository template.
 
 ## License
 

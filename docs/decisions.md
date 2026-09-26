@@ -84,3 +84,143 @@ CI weight follow the branch.
 
 **Cost / risk:** `dev` → `main` merges (PR) are the only path to a release; tags must be cut from
 `main` (recorded in the ship-release skill).
+
+## D-003: Archive scope — the tarball holds everything left after clean
+
+**Date:** 2026-09-26
+
+**Context:** The shorthand "tar core files" left open what happens to files that are neither core
+nor confidently regenerable. Archive removes the working copy wholesale, so nothing may be lost
+in the process.
+
+**Decision:** The tarball contains **everything remaining after the clean step** — core files and
+unclassified files alike. `manifest.json` labels each file's kind (`core | unclassified`). This
+refines the "tar core files" shorthand in `architecture.md` and matches `product.md`'s "compress
+what remains". Approved by the human 2026-09-26 (phase 2 design, D4).
+
+**Consequences:**
+
+- The manifest carries a per-file `kind` label, so core and unclassified content stays
+  distinguishable inside the archive.
+- Restore extracts the whole archive and never filters what it finds — unclassified files
+  round-trip untouched.
+- Consistent with safety rules 4 and 10: only confidently classified regenerable paths are ever
+  removed; everything else survives archive → restore.
+
+## D-004: Archive lifetime — delete the store after a checksum-verified restore
+
+**Date:** 2026-09-26
+
+**Context:** After a restore is verified, the archive in `~/.dormant/store/<project-id>/` is a
+second copy of the user's source (safety rule 9: avoid storing unnecessary copies of user source
+code).
+
+**Decision:** Once restore verification passes (extraction checked against the manifest
+checksums), the project's store directory is deleted. If verification fails, the archive is kept
+(and the extracted tree is left for inspection). Approved by the human 2026-09-26 (phase 2 design,
+R1).
+
+**Consequences:**
+
+- After a successful restore there is exactly one authoritative copy of the project — the working
+  tree.
+- A failed restore never loses the archive; the error path keeps both the archive and the
+  extracted tree.
+- Restore ends with the registry update (`state=active`, archive row removed) followed by store
+  deletion; nothing is deleted before verification succeeds.
+
+## D-005: Regenerable-name scoping — ambiguous basenames only in manifest-sibling scope
+
+**Date:** 2026-09-26
+
+**Context:** Basenames like `dist`, `build`, `bin`, `obj`, `target` are regenerable output in one
+project and hand-made content in another. The shorthand pattern example in `architecture.md`
+over-matched such names project-wide.
+
+**Decision:** Ambiguous basenames (`dist`, `build`, `bin`, `obj`, `target`) match **only in
+manifest-sibling scope** (e.g. `target/` only directly beside `Cargo.toml`; `bin`/`obj` only next
+to a `*.csproj`). Unambiguous names (`node_modules`, `.venv`, `__pycache__`, …) match anywhere in
+the project. Stricter than the shorthand example in `architecture.md`; a hand-made `docs/build/`
+or `assets/target/` is never classified as regenerable. Approved by the human 2026-09-26 (phase 2
+design, A-scope).
+
+**Consequences:**
+
+- Every classification pattern carries an explicit scope; the full manifest→pattern mapping lives
+  in `architecture.md` and is the contract the code follows.
+- Generic cache names are matched only through a rule for a detected ecosystem — never bare.
+- The error direction is safe: some genuinely regenerable directories may be left on disk, which
+  costs space, never data (safety rule 4).
+
+## D-006: Open action — a user-configured editor command, falling back to opening the folder
+
+**Date:** 2026-09-26
+
+**Context:** `product.md` promises **Open** launches the project "in the user's configured/default
+development environment", but macOS has no default handler for "open this folder in a dev
+environment", so the exact behavior was undefined.
+
+**Decision:** Open runs a user-configured command template from the app's settings (e.g.
+`cursor {path}`, `xed {path}`; `{path}` is substituted with the project path). When no command is
+configured, Open falls back to opening the project folder with `NSWorkspace`. The action never
+modifies the project. Approved by the human 2026-09-26.
+
+**Consequences:**
+
+- The app settings gain one field: the editor command template (phase 2 UI slice).
+- Behavior is per-user and explicit; nothing is guessed from the environment.
+- Fallback keeps the action useful with zero configuration.
+
+## D-007: Branching and labeled automated releases (pulled from the template, supersedes the release mechanics of D-002)
+
+**Date:** 2026-09-26
+
+**Context:** The upstream template (`template-app-plus-site`, `dev`) replaced the manual
+tag-on-`main` release flow with a labeled-PR release policy. Imported into this repo on the
+human's instruction ("compare and take the pull"). D-002's `dev`/`main` split stands; this entry
+supersedes its manual tagging step and the tag-triggered `.github/workflows/release.yml`.
+
+**Decision:**
+
+- `dev` is the default integration branch. Changes reach `dev` through a feature-branch pull
+  request; never commit or push directly to `dev` or `main`.
+- A release is proposed by a pull request from `dev` to `main` carrying exactly one
+  `release:patch`, `release:minor`, or `release:major` label.
+- Release-related workflows run only after a merge to `main`. The release workflow applies the
+  labeled bump to the version source (`MARKETING_VERSION` in `project.yml`), updates
+  `CHANGELOG.md`, creates the matching `v<version>` tag, and publishes a GitHub release. A merge
+  without a release label does not publish a release.
+- `dev` carries unreleased work between releases and may match `main` immediately after one.
+  Product and site deployments remain manual.
+
+**Consequences:**
+
+- `.github/workflows/release.yml` must be reworked from the tag-triggered build to the
+  labeled-merge bump/tag/publish flow — tracked as pending work in `docs/status.md`
+  (reworked 2026-09-26).
+- GitHub repository settings are required: default branch `dev`, required-PR protection for `dev`
+  and `main`, and the three `release:*` labels. These are human-only settings (API tokens here
+  cannot change them).
+- `ship-release` and `docs/development.md` describe the labeled flow from now on.
+
+## D-008: Agent operating model (pulled from the template)
+
+**Date:** 2026-09-26
+
+**Context:** The upstream template replaced the PM/subagent delegation model after subagent runs
+proved unreliable. Matches the human's instruction the same day ("do not delegate to subagents
+… do it yourself").
+
+**Decision:** The primary agent acts as senior architect and owns requirements analysis,
+architecture, documentation, code generation, integration, testing, and final verification.
+Subagents are optional and restricted to one sequential, read-only discovery or
+evidence-gathering request; they never implement, make architecture decisions, edit
+documentation, or verify changes. A subagent's summary is evidence, never proof.
+
+**Consequences:**
+
+- `AGENTS.md` carries the senior-architect workflow (merged with this repo's working
+  preferences).
+- The project agents in `.commandcode/agents/` remain defined but are no longer the execution
+  path for implementation or verification.
+- Every change lands through the primary agent, with the repository check command as the gate.
