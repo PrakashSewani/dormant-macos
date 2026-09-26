@@ -6,6 +6,23 @@ restore local projects without losing your repositories.
 **The repository is permanent, the local development environment is disposable.** Clean what can
 be regenerated. Keep what matters. Put unused projects to sleep. Wake them when you need them.
 
+## Install
+
+Once a release is published (nothing is released yet):
+
+```bash
+brew tap PrakashSewani/tap
+brew install --cask dormant
+```
+
+Or download `Dormant-v<version>.zip` from the
+[Releases page](https://github.com/PrakashSewani/dormant-macos/releases).
+
+First launch: Dormant is ad-hoc signed (no Apple Developer Program), so macOS blocks it once.
+Open System Settings → Privacy & Security, click "Open Anyway", and launch Dormant again. Then
+enable the Finder extension in System Settings → Extensions (Finder Extensions) and relaunch
+Finder for the "Dormant ▸" context menu.
+
 ## What it does
 
 From the Finder "Dormant ▸" context menu on a project folder (and the menu bar app):
@@ -29,8 +46,8 @@ Local-first: no accounts, no telemetry, nothing leaves your Mac. The full brief 
 
 ## Status
 
-Phase 2 (the core workflow) is implemented and tested; nothing is released yet. The current
-phase and handoff live in [`docs/status.md`](docs/status.md).
+Phases 0–3 (docs, scaffold, core workflow, promo site) are implemented and tested; nothing is
+released yet. The current phase and handoff live in [`docs/status.md`](docs/status.md).
 
 ## Development
 
