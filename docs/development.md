@@ -7,13 +7,14 @@ Every command below was run on this machine (2026-09-26).
 - macOS 14+ (developed on macOS 27.0, Apple silicon).
 - Xcode 27.0 (build 27A266a) — full Xcode, not just the Command Line Tools.
 - Homebrew; XcodeGen 2.46.0 (`brew install xcodegen`).
-- Python 3 (for the site preview only — it ships with macOS).
+- Node.js 18+ (developed on Node 24.19.0) — for the promo site only.
 
 ## Setup
 
 ```bash
 brew install xcodegen
 sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+npm ci --include=dev --prefix site
 ```
 
 The Xcode project is generated from `project.yml` — `Dormant.xcodeproj` is not committed; the
@@ -28,14 +29,16 @@ check command regenerates it.
 | `xcodebuild -project Dormant.xcodeproj -scheme Dormant -destination 'platform=macOS' -derivedDataPath build build` | Debug build of `Dormant.app` into `build/`. |
 | `open build/Build/Products/Debug/Dormant.app` | Run the app (menu bar item). Quit with `osascript -e 'quit app "Dormant"'`. |
 | `xcodebuild -project Dormant.xcodeproj -scheme Dormant -configuration Release -destination 'platform=macOS' -derivedDataPath build build` | Release build — the artifact `release.yml` zips. |
-| `python3 -m http.server 8931 -d site` | Preview the promo site at <http://127.0.0.1:8931/>. |
+| `npm run build --prefix site` | Build the promo site into `site/_site/` (also step 5 of the check). |
+| `npm start --prefix site` | Eleventy dev server with live reload at <http://localhost:8080/>. |
 
 Raw `xcodebuild` commands assume `xcode-select` points at Xcode (see Setup). `Scripts/check.sh`
 locates `Xcode.app` itself when it doesn't.
 
 ## Environment
 
-No env vars, no secrets, no config files. `Scripts/check.sh` exports
+No env vars, no secrets (`site/package.json` and `site/eleventy.config.js` are build config).
+`Scripts/check.sh` exports
 `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` when `xcode-select` still points at the
 Command Line Tools. The app keeps its data in `~/.dormant/` (created on first use).
 
@@ -61,4 +64,6 @@ changelog section, commits, tags `v<version>`, and publishes the GitHub release 
 | `xcodebuild` says "requires Xcode, but active developer directory … CommandLineTools" | `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer` |
 | "You have not agreed to the Xcode license agreements" | `sudo xcodebuild -license accept` |
 | `xcodegen: command not found` | `brew install xcodegen` |
+| `node: command not found` when running the check | Install Node.js 18+ (the site build is step 5 of the check). |
+| `eleventy: command not found` when building the site | Your npm env omits dev dependencies (`NODE_ENV=production`); install with `npm ci --include=dev --prefix site`. |
 | The "Dormant ▸" Finder menu doesn't appear | Launch the app once, then enable the extension in System Settings → Extensions (Finder Extensions) and relaunch Finder. Ad-hoc-signed local builds may need a one-time approval. |

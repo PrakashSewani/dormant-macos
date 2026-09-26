@@ -23,6 +23,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
   configured editor command for Open (falls back to opening the folder).
 - Repository scaffold from the `template-app-plus-site` template (docs-first skeleton; stack
   chosen at bootstrap).
+- Promo site (Eleventy, `site/`) explaining the product and pointing at the download.
+- Homebrew tap install (`PrakashSewani/homebrew-tap`): `brew tap PrakashSewani/tap && brew
+  install --cask dormant` (D-010); distribution stays signing-free per D-001.
 
 ### Changed
 

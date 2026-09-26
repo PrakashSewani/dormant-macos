@@ -224,3 +224,77 @@ documentation, or verify changes. A subagent's summary is evidence, never proof.
 - The project agents in `.commandcode/agents/` remain defined but are no longer the execution
   path for implementation or verification.
 - Every change lands through the primary agent, with the repository check command as the gate.
+
+## D-009: Site stack — Eleventy 3.1.6, static output, zero client JS
+
+**Date:** 2026-09-26
+
+**Context:** Phase 3, the promo site. `docs/architecture.md` originally scoped `site/` as
+hand-written "static HTML/CSS". The human asked for a lightweight framework ("go use a lightweight
+framework") and selected Eleventy from the presented alternatives (2026-09-26).
+
+**Decision:**
+
+- **Generator:** Eleventy 3.1.6 (`@11ty/eleventy`, resolved live 2026-09-26 via
+  `npm view @11ty/eleventy version`; requires Node >= 18, dev machine has Node 24.19.0). Nunjucks
+  templates in `site/src/`, static output to `site/_site/` (gitignored).
+- **Client JS:** none. Hand-written CSS only; no client-side framework.
+- **Dependencies:** Eleventy is the single devDependency (`site/package.json`, lockfile
+  committed); zero runtime dependencies. Repo shape unchanged — the site imports no product code.
+- **Checks:** `Scripts/check.sh` builds the site (`npm ci --include=dev` + `npm run build` in
+  `site/`; the dev-dependency install is explicit because shells with `NODE_ENV=production` omit
+  dev dependencies) as its final step; CI runs exactly the check command, so a broken site fails
+  the build.
+- **Deploy:** static `site/_site/` output, deployed manually per `ship-release`; no host chosen
+  yet (phase 4).
+
+**Considered and rejected:**
+
+- **Astro** — component SSG with zero-JS output, but a much heavier toolchain than a 1–2 page
+  promo site needs.
+- **Vite + vanilla TS** — a bundler, not a site generator; page structure and any shared layout
+  would be hand-rolled.
+- **Plain HTML + Pico.css** — no build at all, but the human asked for a framework and future
+  pages (changelog) would share layout by copy-paste.
+
+**Cost / risk:** introduces the repo's first Node toolchain (site-only; the product build stays
+Swift/Xcode); Eleventy major releases can change template defaults — the committed lockfile pins
+the build.
+
+## D-010: Distribution — own Homebrew tap, no Apple Developer Program
+
+**Date:** 2026-09-26
+
+**Context:** Asked whether Dormant can ship via Homebrew: `homebrew/cask` has required
+Gatekeeper-passing (Developer ID signed + notarized) artifacts since 2026-09-01 and applies a
+notability bar (self-submission: 225 stars, or 90 forks, or 90 watchers). The human rejected the
+paid Apple Developer Program route ("its expensive") and chose the free path.
+
+**Decision:**
+
+- Ship via our own third-party tap `PrakashSewani/homebrew-tap`:
+  `brew tap PrakashSewani/tap && brew install --cask dormant`. Homebrew explicitly permits
+  unsigned software in third-party taps.
+- D-001's no-signing/no-notarization stance stands and is now load-bearing; the Apple Developer
+  Program stays out (product.md non-goal).
+- No `homebrew/cask` submission for now (Gatekeeper + notability requirements). Revisit only as
+  its own decision if the app gains traction.
+- Tap `version`/`sha256` bumps are manual, documented as exact commands in the `ship-release`
+  skill (no cross-repo PAT or secrets). Automation is optional later.
+- Install friction is accepted and documented: the quarantined app needs the one-time System
+  Settings → Privacy & Security "Open Anyway" approval on first launch (`--no-quarantine` is being
+  removed from brew). The cask `caveats`, the README, and the site all print this.
+- Safety alignment: the cask's `zap` never touches `~/.dormant` (registry + archive store = user
+  source code); only the app's preferences plist is zapped.
+
+**Considered and rejected:**
+
+- **Apple Developer Program + `homebrew/cask` submission** — $99/yr plus real identity and
+  notarization; the human rejected the cost and it reverses a product non-goal.
+- **Source-building formula** — building the GUI app needs full Xcode + XcodeGen; a poor fit for a
+  formula and for users.
+- **`sha256 :no_check`** — pinning the checksum is the point; every release bump carries one.
+
+**Cost / risk:** one Gatekeeper dialog on first launch (same as direct download); the tap is not
+Homebrew-endorsed (their policy states this plainly); a forgotten manual bump leaves `brew upgrade`
+lagging behind the GitHub release.

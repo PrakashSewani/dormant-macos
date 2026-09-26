@@ -43,9 +43,54 @@ Release (cut only when the human asks):
    `cd build/Build/Products/Release && zip -r "Dormant-v<version>.zip" Dormant.app` (both verified
    locally 2026-09-26).
 4. Verify: `gh run watch`, the release page, and a launch smoke of the downloaded zip.
-5. Promo site deploy: filled in at phase 3, when the site has a host (the site deploys
-   independently of the product).
+5. Promo site deploy (manual, only when the human asks): the site builds to `site/_site/`
+   (`npm ci --include=dev && npm run build` in `site/`, D-009). Host: the GitHub Pages project
+   site (`https://prakashsewani.github.io/dormant-macos/`), served from the `gh-pages` branch
+   (one-time human setting: Pages → Deploy from branch → `gh-pages` / root). Publish:
+   `git subtree push --prefix site/_site origin gh-pages`.
+6. Publish to the Homebrew tap (D-010; after the release is verified):
+
+   1. `gh release download v<version> -p "Dormant-v<version>.zip" --dir /tmp/dormant-release`
+   2. `shasum -a 256 /tmp/dormant-release/Dormant-v<version>.zip`
+   3. In [`PrakashSewani/homebrew-tap`](https://github.com/PrakashSewani/homebrew-tap): set
+      `version "<version>"` and `sha256 "<the shasum>"` in `Casks/dormant.rb` (first release:
+      create the file from the template below), commit `dormant <version>`, push to `main`.
+   4. Verify: `brew update && brew install --cask PrakashSewani/tap/dormant`, launch smoke
+      (approve "Open Anyway", enable the Finder extension). On an existing install:
+      `brew upgrade --cask dormant`. Uninstall safety check: `brew uninstall --cask dormant`
+      must leave `~/.dormant` (registry + archives) untouched.
+
+Cask template — `Casks/dormant.rb` in `PrakashSewani/homebrew-tap` (D-010: never `zap`
+`~/.dormant`, it holds the project registry and the archive store = user source code):
+
+```ruby
+cask "dormant" do
+  version "<version>"
+  sha256 "<sha256>"
+
+  url "https://github.com/PrakashSewani/dormant-macos/releases/download/v#{version}/Dormant-v#{version}.zip"
+  name "Dormant"
+  desc "Put idle macOS project workspaces to sleep: clean, archive and restore them safely"
+  homepage "https://prakashsewani.github.io/dormant-macos/"
+
+  depends_on macos: ">= :sonoma"
+
+  app "Dormant.app"
+
+  caveats <<~EOS
+    Dormant is ad-hoc signed (no Apple Developer Program — docs/decisions.md D-001/D-010).
+    On first launch macOS blocks it: open System Settings → Privacy & Security, click
+    "Open Anyway", then launch Dormant again.
+    Then enable the Finder extension in System Settings → Extensions (Finder Extensions)
+    and relaunch Finder for the "Dormant ▸" context menu.
+  EOS
+
+  zap trash: "~/Library/Preferences/com.dormant.Dormant.plist"
+end
+```
 
 Rollback / yank: `gh release delete v<version> --yes` (keep or delete the tag with
-`git tag -d v<version> && git push origin :refs/tags/v<version>`), fix forward with a new patch
-version. There is no store listing to pull and nothing runs on Dormant servers (local-first).
+`git tag -d v<version> && git push origin :refs/tags/v<version>`), and in
+`PrakashSewani/homebrew-tap` `git revert` the `dormant <version>` commit so installs fall back to
+the previous release. Fix forward with a new patch version. There is no store listing to pull and
+nothing runs on Dormant servers (local-first).

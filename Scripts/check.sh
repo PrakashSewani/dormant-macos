@@ -9,3 +9,4 @@ xcrun swift-format lint --recursive Sources Tests
 xcodegen generate
 xcodebuild -project Dormant.xcodeproj -scheme Dormant -destination 'platform=macOS' build
 xcodebuild -project Dormant.xcodeproj -scheme Dormant -destination 'platform=macOS' test
+(cd site && npm ci --include=dev && npm run build)

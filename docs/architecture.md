@@ -7,9 +7,10 @@ Settled with D-001 (2026-09-26). Docs are the source of truth: code follows this
 One repository: the product and its promo site side by side.
 
 - `Sources/`, `Tests/` — the product (Swift).
-- `site/` — static promo site (phase 3). Deploys independently, imports no product code. Nothing
-  is shared between product and site today; shared brand constants only earn their place if both
-  sides actually need them.
+- `site/` — the promo site (Eleventy 3.1.6, D-009): Nunjucks templates in `site/src/`, hand-written
+  CSS, no client JS, static output to `site/_site/` (gitignored). Deploys independently, imports
+  no product code. Nothing is shared between product and site today; shared brand constants only
+  earn their place if both sides actually need them.
 - `project.yml` — XcodeGen manifest (committed). `Dormant.xcodeproj` is generated and never
   committed.
 - `Scripts/check.sh` — the check command, the definition of done.
@@ -21,7 +22,7 @@ One repository: the product and its promo site side by side.
 | `DormantCore` | `Sources/DormantCore/` — static library, macOS 14+ | All logic: project detection and classification, size accounting, git inspection, SQLite registry, archive/restore engine, dependency-command detection. No UI. Fully unit-testable. |
 | `DormantApp` | `Sources/DormantApp/` — macOS app (accessory / `LSUIElement`, menu bar) | Menu bar item (`MenuBarExtra`), main window (project list, Project Info, settings), preview/confirm dialogs, executes the real operations. Handles `dormant://` URLs. |
 | `DormantFinder` | `Sources/DormantFinder/` — Finder Sync appex | Inline "Dormant ▸" context submenu on project folders. Forwards every action to the app via `dormant://`. Never performs destructive work itself. |
-| `site/` | `site/` — static HTML/CSS | The promo site (phase 3). |
+| `site/` | `site/` — Eleventy (Nunjucks → static HTML) | The promo site: the product promise and the download link. |
 | (shared) | — | Nothing today. Product and site share no code. |
 
 - Bundle IDs: `com.dormant.Dormant` (app), `com.dormant.Dormant.Finder` (appex). The app product is
@@ -265,6 +266,7 @@ appex) — and a `Dormant` scheme that builds app + extension and runs the tests
 2. `xcodegen generate`
 3. `xcodebuild -project Dormant.xcodeproj -scheme Dormant -destination 'platform=macOS' build`
 4. `xcodebuild -project Dormant.xcodeproj -scheme Dormant -destination 'platform=macOS' test`
+5. `npm ci --include=dev && npm run build` in `site/` (the Eleventy promo-site build, D-009)
 
 CI (`.github/workflows/ci.yml`): on push/PR → `macos-26` runner → `actions/checkout@v7.0.1` →
 `brew install xcodegen` → `Scripts/check.sh`.
@@ -276,4 +278,5 @@ Phase 1 landed this scaffold as deliberately minimal code (menu bar item with a 
 window, submenu routing, a module skeleton). Phase 2 replaced the placeholders with the real
 workflow described above: the app hosts the project list, the preview/confirm dialogs, Project
 Info and settings; the extension routes all six actions through `dormant://`; and `DormantCore`
-holds the full engine behind the test suite run by `Scripts/check.sh`.
+holds the full engine behind the test suite run by `Scripts/check.sh`. Phase 3 replaced the
+placeholder `site/index.html` with the Eleventy promo site (D-009).

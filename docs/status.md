@@ -10,57 +10,47 @@ rule 4. Keep exactly one phase `in progress`.
 | 0 | Requirements + stack selection: fill `docs/product.md`, choose the stack, record D-001 | complete |
 | 1 | Scaffold: structure, checks, CI, release path — recorded in `docs/architecture.md` / `development.md` | complete |
 | 2 | Product: the core workflow, end to end | complete |
-| 3 | Promo site: the site that explains it and sends people to it | in progress |
-| 4 | Launch: first release tagged, site deployed | not started |
+| 3 | Promo site: the site that explains it and sends people to it | complete |
+| 4 | Launch: first release tagged, site deployed | in progress |
 
 ## Current handoff
 
-- **Phase:** 3 — promo site. Phase 2 (product core workflow) is implemented and green.
-- **Done this session (phase 2):** phases 0–1 re-validated (`Scripts/check.sh` green); design
-  settled with the human — D-003 (archive tarball = everything left after clean), D-004 (store
-  deleted after a checksum-verified restore), D-005 (manifest-sibling scoping for ambiguous
-  names), D-006 (Open = user-configured editor command, falling back to opening the folder) — all
-  in `docs/decisions.md`; then implemented end to end: classification rule table +
-  `SizeAccounting`, SQLite registry schema v1 (`SQLiteDB.swift`, `Registry.swift`), `GitInspector`
-  / `ProcessRunner` / `Checksums` / `DormantError` / `DormantURL`, `Scanner`, `CleanEngine`
-  (plan/execute with re-validation before every removal), `ArchiveEngine` + `manifest.json` v1
-  (D-003; `tar -tzf` entry-set verification before the working copy is removed), `RestoreEngine`
-  (checksum-verified extraction, D-004) + `InstallCommands`/`InstallRunner`, and the app:
-  app-level `dormant://` handling via `application(_:open:)` (works with the window closed),
-  `ActionPresenter` preview/confirm dialogs for all six actions, project list with
-  Scan/Refresh/sizes/state badges, Project Info, and the editor-command setting (D-006). All code
-  written directly and sequentially per the human's instruction (no subagents).
-- **Done this session (template sync):** pulled `template-app-plus-site` `dev` and merged it:
-  `AGENTS.md` now carries the senior-architect model (primary agent implements directly;
-  subagents read-only discovery only) and the labeled release policy; `CONTRIBUTING.md`,
-  `.github/PULL_REQUEST_TEMPLATE.md`, `project-bootstrap` updated from the template;
-  `ship-release` rewritten to the labeled flow keeping the real commands; decisions **D-007**
-  (labeled automated releases — supersedes D-002's manual tagging) and **D-008** (agent
-  operating model) recorded; `architecture.md` gained "Branch and release flow";
-  `development.md` releases section updated; template name fixed back to
-  `template-app-plus-site` where the bootstrap rename had replaced it (README, CHANGELOG,
-  skill metadata); and `.github/workflows/release.yml` reworked (human-approved) from the tag
-  trigger to the D-007 labeled-merge flow — label parsing and the version/changelog bump were
-  dry-run locally (0.1.0 → 0.2.0, `[Unreleased]` promoted to the version section, notes
-  extracted); README rewritten as the product README and docs audited against the
-  implementation.
-- **Landing:** the session's work is committed on `feature/phase-2-core-workflow` and opened as a
-  PR to `dev` (merge via PR per D-007).
-- **Verified:** `Scripts/check.sh` end to end — lint clean, build OK, **89 tests / 12 suites
-  pass**. Tests include the archive→restore round trip with real `tar`/`git`, dirty-git warning
-  counts, tar-verification failure leaving the working copy intact with no registry row, tampered
-  clean plans rejected before removal, checksum-mismatch restore keeping archive and extracted
-  tree, the install-command detection table, and `dormant://` URL round-trips. App launch/quit
-  smoke OK on the Debug build.
+- **Phase:** 4 — launch. Phase 3 (promo site) is implemented, checked and green.
+- **Done this session (phase 3):** site stack chosen with the human and recorded first — **D-009**
+  (Eleventy 3.1.6, resolved live via `npm view`, Nunjucks → static `site/_site/`, zero client JS,
+  lockfile committed); `site/` scaffolded (`package.json`, `eleventy.config.js`, `src/index.njk`,
+  `src/_includes/base.njk`, `src/styles.css`); the one-page promo built to `docs/product.md`
+  (the promise, a workspace size-receipt proof object, Clean/Archive/Restore with their safety
+  notes, the install-command preview, the "rules Dormant will not break", download CTA to GitHub
+  Releases); design pass in a storage-ledger direction (warm paper, serif display, mono data,
+  hibernate/wake color roles) verified in a real browser at 1280×800 and 390×844, with the accent
+  darkened from 4.3:1 to 5.3:1 contrast after the check; `Scripts/check.sh` gained step 5 (the
+  site build) and CI runs exactly it, so no workflow change was needed; docs updated
+  (`architecture.md` shape/components/check spec, `development.md` prerequisites/setup/commands/
+  troubleshooting). Gotcha handled and documented: this machine's npm omits dev dependencies
+  (`NODE_ENV=production`, `omit=dev`), so site installs use `npm ci --include=dev`.
+- **Verified:** `Scripts/check.sh` end to end on the final tree — lint clean, build OK, **89 tests
+  / 12 suites pass**, and `npm ci --include=dev && npm run build` writes `site/_site/index.html`
+  and `styles.css`. Design verified from full-page screenshots at 1280×800 and 390×844 (hero wrap
+  fixed after the first look; layout stacks cleanly on mobile).
+- **Landing:** this work is committed on `feature/phase-3-promo-site` and opened as a PR to `dev`
+  (merge via PR per D-007).
 - **Blocked by:** (1) the manual Finder round trip on a real project (enable the extension in
   System Settings → Extensions, relaunch Finder; see `docs/development.md` troubleshooting);
   (2) human-only GitHub settings for D-007: create the `release:patch` / `release:minor` /
   `release:major` labels and make `dev` the default branch with required-PR protection.
-- **Next action (new session):** phase 3 — the promo site in `site/` (currently a placeholder `index.html`):
-  explain the product promise ("the repository is permanent, the local development
-  environment is disposable") and point people at the download; it deploys independently of the
-  product (see `docs/architecture.md`, repo shape). Then phase 4: the first release PR from
-  `dev` to `main` (ship-release skill).
+- **Done this session (phase 3 polish + distribution plan):** footer styling fixed (it had been
+  left unstyled and broke out of the content column; reproduced and verified in a Brave session
+  via agent-browser CDP, hairline alignment corrected after a first pass); **D-010** recorded —
+  distribution via our own Homebrew tap `PrakashSewani/homebrew-tap` with **no Apple Developer
+  Program** (the human rejected the paid route); `homebrew/cask` submission explicitly deferred
+  (Gatekeeper + notability bars, revisit only as its own decision); `ship-release` gained the tap
+  publish procedure with the cask template (safe `zap`: never `~/.dormant`) and the GitHub Pages
+  site-deploy procedure; README + promo site now carry the install command and the first-launch
+  Gatekeeper note; the tap repo `PrakashSewani/homebrew-tap` was created.
+- **Next action (new session):** merge the phase 3 PR into `dev`, then phase 4: the release PR
+  from `dev` to `main` with one `release:*` label (ship-release skill) → run the tap publish
+  procedure → manual site deploy when the human asks.
 
 ---
 
