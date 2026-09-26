@@ -34,3 +34,9 @@ coverage/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Xcode / Swift
+DerivedData/
+.build/
+xcuserdata/
+Dormant.xcodeproj/
