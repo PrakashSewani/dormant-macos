@@ -28,8 +28,10 @@ One repository: the product and its promo site side by side.
 - Bundle IDs: `com.dormant.Dormant` (app), `com.dormant.Dormant.Finder` (appex). The app product is
   `Dormant.app` (`PRODUCT_NAME: Dormant` on the `DormantApp` target).
 - Version source of truth: `MARKETING_VERSION` in `project.yml` (starts at 0.1.0).
-- Signing: ad-hoc (`CODE_SIGN_IDENTITY=-`), no App Sandbox (local-only tool that must operate on
-  arbitrary folders), no certificates/notarization — explicitly out of scope (D-001).
+- Signing: ad-hoc (`CODE_SIGN_IDENTITY=-`), no certificates/notarization (D-001). Sandbox split
+  (D-011): `DormantFinder` carries App Sandbox
+  (`Sources/DormantFinder/DormantFinder.entitlements`) because macOS loads no non-sandboxed app
+  plugin; `DormantApp` / `DormantCore` have none (must operate on arbitrary folders).
 
 ## Data flow
 
@@ -81,6 +83,9 @@ app foregrounds → preview/confirm dialog → `DormantCore` operation → regis
 
 URL contract: `path` carries the selected item's file URL (`absoluteString`, percent-encoded).
 URL handling is app-level (`application(_:open:)`) so it works with the main window closed.
+Every action first registers or refreshes its project in the registry
+(`Scanner.register(projectAt:)`, state-preserving), so the app's list always reflects what the
+user touches (D-012).
 `restore` for an archive-only project cannot come from Finder (there is no folder to
 right-click); it is triggered from the app's project list.
 
@@ -98,8 +103,9 @@ plans and confirms; Core executes. `execute(plan:)` is the only removal entry po
   again, reported in `reappeared`. Missing active paths are reported in `missing`, never
   auto-deleted. (`ScanReport { added, updated, missing, reappeared }`.)
 - **Clean:** classify → `CleanPlan` (per-path name, size, matched rule) → preview with names,
-  sizes, total reclaim → confirm → remove regenerable paths only. Unlink, not Trash — regenerable
-  by definition. Per-path failures are collected, not fatal.
+  sizes, total reclaim (and the permanent, nothing-archived note, D-012) → confirm → remove
+  regenerable paths only. Unlink, not Trash — regenerable by definition. Per-path failures are
+  collected, not fatal.
 - **Archive:** git check (see Git inspection; dirty **or unknown** → warn with modified/untracked
   counts first — uncommitted files are preserved inside the archive — and proceed only on explicit
   confirm) → clean regenerable (record reclaimed bytes) → manifest data: walk the entire remaining

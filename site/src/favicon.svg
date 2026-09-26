@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3c5a43"/>
+      <stop offset="1" stop-color="#213427"/>
+    </linearGradient>
+    <mask id="moon">
+      <rect width="64" height="64" fill="black"/>
+      <circle cx="41.44" cy="32.00" r="23.04" fill="white"/>
+      <ellipse cx="51.04" cy="32.00" rx="17.92" ry="23.68" fill="black"/>
+    </mask>
+  </defs>
+  <rect width="64" height="64" rx="14.08" fill="url(#plate)"/>
+  <rect width="64" height="64" fill="#f4f1e8" mask="url(#moon)"/>
+</svg>

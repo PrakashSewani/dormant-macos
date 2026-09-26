@@ -35,7 +35,9 @@ Available from a Finder right-click menu on a project folder and from the app it
   modifies the project.
 - **Clean** — keep the project, remove regenerable development state. Shows an understandable
   preview of what will be removed and how much space is reclaimed before anything happens.
-  Never deletes arbitrary files because they are large.
+  Never deletes arbitrary files because they are large. The removal is permanent (nothing is
+  archived): the development environment is rebuilt later by the project's own dependency
+  commands, not by Dormant (D-012).
 - **Archive** — make the local workspace dormant while preserving the project: remove regenerable
   state, compress what remains (source, `.git`, configs) into a local archive, remove the working
   copy. Warns clearly (with counts) about uncommitted changes first. Never deletes the repository.

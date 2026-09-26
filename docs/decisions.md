@@ -298,3 +298,110 @@ paid Apple Developer Program route ("its expensive") and chose the free path.
 **Cost / risk:** one Gatekeeper dialog on first launch (same as direct download); the tap is not
 Homebrew-endorsed (their policy states this plainly); a forgotten manual bump leaves `brew upgrade`
 lagging behind the GitHub release.
+
+## D-011: Sandbox split — the Finder extension is sandboxed, the app is not
+
+**Date:** 2026-09-26
+
+**Context:** The "Dormant ▸" Finder menu never appeared on any right-click — on folders or on
+empty space. The cause was at registration, not in Finder: `pkd` rejected the appex at discovery
+with `Ignoring mis-configured plugin at […/DormantFinder.appex]: plug-ins must be sandboxed`
+(`log show`), so `pluginkit -mAvvv -p com.apple.FinderSync` never listed it and System Settings
+had nothing to enable. D-001 turned App Sandbox off repo-wide; macOS loads no non-sandboxed app
+plugin, whatever the extension does.
+
+**Decision:**
+
+- `DormantFinder` is sandboxed (`com.apple.security.app-sandbox` in
+  `Sources/DormantFinder/DormantFinder.entitlements`) — a hard platform requirement for plugin
+  discovery. The extension only reads Finder's selected/target URLs and forwards `dormant://`
+  URLs, so the sandbox costs nothing functionally.
+- `DormantApp` and `DormantCore` stay **unsandboxed**: the app must operate on arbitrary project
+  folders and shell out to `git`, `/usr/bin/tar`, and the user's package managers. D-001's "no
+  App Sandbox" stands for them.
+- Signing stays ad-hoc (D-001/D-010); entitlements are embedded ad-hoc, no certificate needed.
+
+**Considered and rejected:**
+
+- **Sandboxing the app as well** — every project folder would need user-selected file grants and
+  the shelled-out install commands would fight the sandbox; nothing user-facing gains.
+- **Replacing Finder Sync with a Quick Action/Services menu to dodge the sandbox** — D-001 already
+  rejected it (wrong menu placement), and the sandbox requirement is not a reason to move menus.
+- **Temporary-exception entitlements for the appex** — it reads no files itself; over-granting.
+
+**Cost / risk:** the ad-hoc-signed extension still needs a one-time enable in System Settings →
+Extensions (Finder Extensions) plus a Finder relaunch; any change to the appex's entitlements
+changes its code signature and can require re-approval.
+
+## D-012: Clean stays one-way; every action registers its project in the registry
+
+**Date:** 2026-09-26
+
+**Context:** Live Finder testing: Clean on `dev-rig` reclaimed space, but the project never appeared
+in the app and Restore reported no registry entry. Two causes: (1) the clean path in
+`ActionPresenter` never wrote to the registry — only Archive and Open Repository registered
+projects, so a Finder-driven Clean left no trace in the app; (2) an expectation gap — the natural
+"undo" for a Clean was taken to be Restore, but Clean archives nothing (`~/.dormant/store/` empty)
+and Restore is archive-only by design. Alternatives were presented: Restore falls back to running
+the detected install commands when there is no archive; a separate "Rebuild dev state" action;
+Clean stays one-way. **The human chose: Clean stays one-way.**
+
+**Decision:**
+
+- Clean is permanent-by-design: regenerable state is removed, never archived. Getting a working dev
+  environment back afterwards is the project's own dependency commands' job (`cargo build`,
+  `npm install`, …) — Dormant does not run them for a cleaned project. Restore remains strictly
+  archive-only (D-003/D-004 flow unchanged).
+- Every Finder/app action registers or refreshes its project in the registry before doing its work
+  (`Scanner.register(projectAt:)`, which preserves `state` on existing rows), so the app's project
+  list always reflects what the user touches — including a Clean the user then cancels.
+- The Clean preview dialog states plainly that the removal is permanent and that development state
+  is rebuilt later with the project's own dependency commands.
+
+**Considered and rejected:**
+
+- **Restore falls back to install commands when no archive exists** — the human wants Clean visibly
+  one-way; a silent rebuild path would blur the two actions.
+- **A separate "Rebuild dev state" action** — deferred; resurface only if the one-way feel becomes
+  annoying in practice.
+
+**Cost / risk:** there is no in-app undo for a Clean; the dialog warning and the classification
+invariant (only confidently regenerable paths are ever removed) are the guardrails.
+
+## D-013: Icon system — one crescent-moon mark, script-rendered at every size
+
+**Date:** 2026-09-26
+
+**Context:** The app had no icon (plain generic bundle) and the site had no favicons. Needed for
+the Finder/dock identity and for release/distribution surfaces (Homebrew cask `icon_url`, site,
+README).
+
+**Decision:**
+
+- **Mark:** a paper (`#f4f1e8`) crescent moon — a circle with an elliptical terminator bitten out,
+  centered by its bounding box — on a hibernate (`#3c5a43` → `#213427`) squircle. One idea, no
+  ornament; readable down to 16px.
+- **One source, script-rendered:** `Scripts/render-icons.swift` (AppKit/CoreGraphics, no
+  dependencies) draws the mark and writes every raster size. The design lives in the script; no
+  binary master file.
+- **Variants:** the macOS Big Sur grid (squircle at 80.5% with transparent margin) for the app
+  icon; a full-bleed rounded square for web favicons; full-bleed square for `apple-touch-icon`
+  (iOS applies its own mask).
+- **Sizes delivered:** `Assets.xcassets/AppIcon.appiconset` 16/32/64/128/256/512/1024 (the
+  standard mac set), `site/src/` `favicon.svg` (generated from the same geometry),
+  `favicon-16/32/48.png`, `apple-touch-icon.png` (180), `icon-512.png` / `icon-1024.png` for
+  publishing surfaces.
+- **Wiring:** `ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon` + `CFBundleIconName` for the app;
+  `<link rel="icon">` tags in `site/src/_includes/base.njk`; PNGs/SVG as Eleventy passthrough
+  copies.
+
+**Considered and rejected:**
+
+- **A binary design file (`.sketch`/`.figma`) as master** — nothing in the repo could regenerate
+  sizes from it; the script is the master.
+- **A folder/archive glyph** — too busy at favicon sizes; the moon carries the "put it to sleep"
+  promise alone.
+
+**Cost / risk:** the design is code — visual tweaks mean editing the script and re-running it
+(`swift Scripts/render-icons.swift`); every raster size and the favicon SVG regenerate from that
+one geometry, so nothing can drift out of step.
