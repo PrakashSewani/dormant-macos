@@ -15,25 +15,23 @@ rule 4. Keep exactly one phase `in progress`.
 
 ## Current handoff
 
-- **Phase:** 4 — launch. Phase 3 (promo site) is merged to `dev` (PR #3).
-- **Done this session:** (1) **D-011** — root-caused the invisible "Dormant ▸" Finder menu: `pkd`
-  rejected the appex ("plug-ins must be sandboxed"), so it was never registered anywhere.
-  `DormantFinder` now carries App Sandbox (new `DormantFinder.entitlements` + `project.yml`
-  wiring); the app stays unsandboxed. Extension display name fixed to "Dormant" (was
-  "DormantFinder"), so the Finder submenu reads "Dormant ▸". (2) **D-012** — Clean stays one-way
-  (the human's choice over a rebuild path): every Finder/app action now registers its project in
-  the registry (`ActionPresenter.resolveRecord`), fixing "no entry in the app" after a Finder Clean;
-  the Clean preview states the removal is permanent and that development state is rebuilt with the
-  project's own dependency commands; Restore stays archive-only. (3) Site: "Coming soon for macOS"
-  CTAs replace the download buttons and the brew line keeps its command with a disabled Copy
-  button plus a "Not published yet" note (still zero client JS).
-- **Verified:** `Scripts/check.sh` end to end — lint clean, build OK, **89 tests / 12 suites pass**,
-  site builds. Rebuilt Debug appex carries exactly `app-sandbox` + Debug `get-task-allow`;
-  `pluginkit -mAvvv -p com.apple.FinderSync` lists exactly one `com.dormant.Dormant.Finder`
-  ("Display Name = Dormant"). Live Finder test: Clean on `dev-rig` removed `target/` (524K left).
-  Not verified: CLI `open dormant://…` did not reach the running app (Finder's `NSWorkspace`
-  delivery does work — the human's Finder Clean ran through it); note as a possible follow-up.
-- **Landing:** `feature/finder-menu-and-coming-soon` → PR → `dev` (D-007), merged this session.
+- **Phase:** 4 — launch. The icon work is on `feature/icon-cocoon` → PR → `dev` (this session).
+- **Done this session:** (1) **D-014** — new mark, the **cocoon**: nine witty candidates (paused,
+  folder with Z, standby glyph, tucked-in, vacuum bag, tin can, cocoon, hammock, seed) were
+  rendered as app icon + favicon product images (dock and browser-tab mockups, favicon size
+  ladder, contact sheet in `build/icon-concepts/`); the human chose the cocoon — a pod hanging
+  from a thread with two silk wraps, "hatches exactly when you need it". `Scripts/render-icons.swift`
+  redraws it (wrap chords refined to curved bands crossing the pod); every app icon size, favicon
+  and the favicon SVG regenerate from that one script. (2) Scrubbed the stray flag reference from
+  the public repo: the two icon commit bodies reworded via history rewrite (`dev` force-pushed,
+  merged `feature/icon-two-circles` deleted from origin), PR #5 body edited, D-013 wording
+  neutralized. Residual: the phrase still exists inside old commit *file contents* (e.g. D-013's
+  text as committed in `71d5537`) and in PR #5's frozen commit list — a full
+  `git filter-repo` purge would clear those if ever needed.
+- **Verified:** `Scripts/check.sh` end to end — lint (pre-existing Dialogs.swift warnings only),
+  generate, build OK, **89 tests / 12 suites pass**, site builds (8 assets copied). Icon sizes and
+  favicon SVG regenerated from the one script and eyeballed at 1024/512/48/32 px.
+- **Landing:** `feature/icon-cocoon` → PR → `dev` (D-007), this session.
 - **Blocked by:** (1) the manual Finder round trip on the fixed extension (enable in System
   Settings → Extensions (Finder Extensions), relaunch Finder, right-click a project folder);
   (2) human-only GitHub settings for D-007: the `release:patch` / `release:minor` /
