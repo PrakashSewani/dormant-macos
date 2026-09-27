@@ -368,7 +368,7 @@ Clean stays one-way. **The human chose: Clean stays one-way.**
 **Cost / risk:** there is no in-app undo for a Clean; the dialog warning and the classification
 invariant (only confidently regenerable paths are ever removed) are the guardrails.
 
-## D-013: Icon system — one crescent-moon mark, script-rendered at every size
+## D-013: Icon system — one mark, script-rendered at every size
 
 **Date:** 2026-09-26
 
@@ -380,8 +380,8 @@ README).
 
 - **Mark:** two circles — a paper (`#f4f1e8`) disc with an offset circular hole (a tapering
   ring), centered by its bounding box — on a hibernate (`#3c5a43` → `#213427`) squircle. The first
-  mark, cleaned up: no spark, no seam. A crescent moon was tried and rejected (reads as the
-  Pakistan flag crescent); one idea, no ornament; readable down to 16px.
+  mark, cleaned up: no spark, no seam. A crescent moon was tried and rejected (at icon sizes it
+  reads as a flag crescent); one idea, no ornament; readable down to 16px.
 - **One source, script-rendered:** `Scripts/render-icons.swift` (AppKit/CoreGraphics, no
   dependencies) draws the mark and writes every raster size. The design lives in the script; no
   binary master file.
@@ -402,8 +402,38 @@ README).
   sizes from it; the script is the master.
 - **A folder/archive glyph** — too busy at favicon sizes; the eclipse carries the "project going
   to sleep" promise alone.
-- **A crescent moon** — tested and cut: reads as the Pakistan flag crescent at icon sizes.
+- **A crescent moon** — tested and cut: at icon sizes it reads as a flag crescent.
 
 **Cost / risk:** the design is code — visual tweaks mean editing the script and re-running it
 (`swift Scripts/render-icons.swift`); every raster size and the favicon SVG regenerate from that
 one geometry, so nothing can drift out of step.
+
+## D-014: Mark change — the cocoon (supersedes the mark chosen in D-013)
+
+**Date:** 2026-09-27
+
+**Context:** The ring mark was clean but said nothing. The human asked for a witty mark and
+reviewed nine script-rendered candidates — paused, folder with Z, standby glyph, tucked-in,
+vacuum bag, tin can, cocoon, hammock, seed — each delivered as app icon and favicon product
+images (dock and browser-tab mockups, favicon size ladder). The human chose the cocoon.
+
+**Decision:**
+
+- **Mark:** a cocoon hanging from a thread — a tapered paper pod with two wrap chords, on the
+  D-013 hibernate plate. The joke is the product promise: the project is dormant and hatches
+  exactly when you need it (Restore).
+- Everything else in D-013 stands: one idea, no ornament, bbox-centered, every raster size and
+  the favicon SVG regenerated from `Scripts/render-icons.swift`.
+
+**Considered and rejected:**
+
+- **Paused (pause bars)** — reads as a media control, not this product.
+- **Folder with a Z** — D-013 already cut a folder glyph as too busy at favicon sizes.
+- **Standby glyph** — reads as "power", not "sleep".
+- **Tucked-in, vacuum bag, tin can, hammock** — charming at 512 px, mush at 16 px.
+- **Seed** — "dormant is what seeds do" only lands with the caption.
+- **The ring mark** — correct, and boring; the human asked for wit.
+
+**Cost / risk:** the wrap chords fade below ~24 px (the pod-and-thread silhouette still reads);
+a cocoon is less literal than a folder for a file tool — the tagline and site copy carry the
+metaphor.

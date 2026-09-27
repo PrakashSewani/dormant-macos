@@ -1,6 +1,7 @@
 import AppKit
 
-// Regenerates every icon size from the Dormant mark (D-013). Run: swift Scripts/render-icons.swift
+// Regenerates every icon size from the Dormant mark (D-013 system, D-014 mark).
+// Run: swift Scripts/render-icons.swift
 
 let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
 
@@ -8,40 +9,24 @@ let paper = NSColor(srgbRed: 0.9569, green: 0.9451, blue: 0.9098, alpha: 1)
 let plateTop = NSColor(srgbRed: 0.2353, green: 0.3529, blue: 0.2627, alpha: 1)
 let plateBottom = NSColor(srgbRed: 0.1294, green: 0.2039, blue: 0.1529, alpha: 1)
 
-// Mark geometry in unit space (y measured from the top), before centering.
-// Two circles, like the first mark: a paper disc with an offset circular hole (eccentric ring).
-let moonRadius = 0.34
-let terminatorSemi = (x: 0.25, y: 0.25)
-var moonCenter = (x: 0.50, y: 0.51)
-var terminatorCenter = (x: 0.52, y: 0.49)
-
-func inMoon(_ x: Double, _ y: Double) -> Bool {
-  let dc = (x - moonCenter.x) * (x - moonCenter.x) + (y - moonCenter.y) * (y - moonCenter.y)
-  guard dc <= moonRadius * moonRadius else { return false }
-  let de = pow((x - terminatorCenter.x) / terminatorSemi.x, 2)
-    + pow((y - terminatorCenter.y) / terminatorSemi.y, 2)
-  return de > 1
-}
-
-// Shift the mark so its bounding box sits dead center of the plate.
-var minX = 1.0, maxX = 0.0, minY = 1.0, maxY = 0.0
-let steps = 200
-for i in 0..<steps {
-  for j in 0..<steps {
-    let x = (Double(i) + 0.5) / Double(steps)
-    let y = (Double(j) + 0.5) / Double(steps)
-    if inMoon(x, y) {
-      minX = min(minX, x)
-      maxX = max(maxX, x)
-      minY = min(minY, y)
-      maxY = max(maxY, y)
-    }
-  }
-}
-let shift = (x: 0.5 - (minX + maxX) / 2, y: 0.5 - (minY + maxY) / 2)
-moonCenter = (moonCenter.x + shift.x, moonCenter.y + shift.y)
-terminatorCenter = (terminatorCenter.x + shift.x, terminatorCenter.y + shift.y)
-print(String(format: "centering shift: %+.4f, %+.4f", shift.x, shift.y))
+// Mark geometry in unit space (y measured from the top): a cocoon hanging from a
+// thread — tapered pod with two wrap chords. Drawn bbox-centered.
+let threadTop = 0.14
+let threadBottom = 0.32
+let threadWidth = 0.022
+let podStart = (x: 0.50, y: 0.28)
+let podSegs: [((Double, Double), (Double, Double), (Double, Double))] = [
+  ((0.62, 0.34), (0.70, 0.46), (0.70, 0.58)),
+  ((0.70, 0.76), (0.61, 0.86), (0.50, 0.86)),
+  ((0.39, 0.86), (0.30, 0.76), (0.30, 0.58)),
+  ((0.30, 0.46), (0.38, 0.34), (0.50, 0.28)),
+]
+let podStroke = 0.02
+let chords = [0.54, 0.67]
+let chordSpan = (x0: 0.26, x1: 0.74)
+let chordLift = 0.03
+let chordSag = 0.05
+let chordWidth = 0.02
 
 enum Variant {
   case appIcon
@@ -84,32 +69,47 @@ func render(size: Int, variant: Variant) -> NSBitmapImageRep {
     NSPoint(x: origin + CGFloat(x) * side, y: origin + (1 - CGFloat(y)) * side)
   }
 
-  // Eclipse ring: paper disc with an offset circular bite cleared out
-  // in a transparency layer, so edges stay clean over the plate gradient.
+  // Cocoon: paper thread, paper pod, wrap chords cut out — all in one
+  // transparency layer, so edges stay clean over the plate gradient.
   NSGraphicsContext.saveGraphicsState()
   plate.addClip()
   ctx.cgContext.beginTransparencyLayer(auxiliaryInfo: nil)
 
-  let c = p(moonCenter.x, moonCenter.y)
-  let moon = NSBezierPath(
-    ovalIn: NSRect(
-      x: c.x - moonRadius * side, y: c.y - moonRadius * side,
-      width: 2 * moonRadius * side, height: 2 * moonRadius * side
-    )
-  )
-  paper.setFill()
-  moon.fill()
+  let thread = NSBezierPath()
+  thread.move(to: p(0.5, threadTop))
+  thread.line(to: p(0.5, threadBottom))
+  thread.lineCapStyle = .round
+  thread.lineWidth = threadWidth * side
+  paper.setStroke()
+  thread.stroke()
 
-  let terminatorRect = NSRect(
-    x: origin + CGFloat(terminatorCenter.x - terminatorSemi.x) * side,
-    y: origin + (1 - CGFloat(terminatorCenter.y + terminatorSemi.y)) * side,
-    width: CGFloat(2 * terminatorSemi.x) * side,
-    height: CGFloat(2 * terminatorSemi.y) * side
-  )
+  let pod = NSBezierPath()
+  pod.move(to: p(podStart.x, podStart.y))
+  for (c1, c2, end) in podSegs {
+    pod.curve(to: p(end.0, end.1), controlPoint1: p(c1.0, c1.1), controlPoint2: p(c2.0, c2.1))
+  }
+  pod.close()
+  pod.lineJoinStyle = .round
+  pod.lineWidth = podStroke * side
+  paper.setStroke()
+  pod.stroke()
+  paper.setFill()
+  pod.fill()
+
   ctx.cgContext.setBlendMode(.clear)
-  ctx.cgContext.addEllipse(in: terminatorRect)
-  ctx.cgContext.fillPath()
+  for y in chords {
+    let chord = NSBezierPath()
+    chord.move(to: p(chordSpan.x0, y - chordLift))
+    chord.curve(
+      to: p(chordSpan.x1, y - chordLift),
+      controlPoint1: p(0.39, y + chordSag), controlPoint2: p(0.61, y + chordSag)
+    )
+    chord.lineCapStyle = .round
+    chord.lineWidth = chordWidth * side
+    chord.stroke()
+  }
   ctx.cgContext.setBlendMode(.normal)
+
   ctx.cgContext.endTransparencyLayer()
   NSGraphicsContext.restoreGraphicsState()
 
@@ -170,6 +170,20 @@ write(render(size: 180, variant: .touch), "site/src/apple-touch-icon.png")
 write(render(size: 512, variant: .appIcon), "site/src/icon-512.png")
 write(render(size: 1024, variant: .appIcon), "site/src/icon-1024.png")
 
+let podPath = """
+  M \(f(podStart.x)) \(f(podStart.y)) \
+  C \(f(podSegs[0].0.0)) \(f(podSegs[0].0.1)), \(f(podSegs[0].1.0)) \(f(podSegs[0].1.1)), \(f(podSegs[0].2.0)) \(f(podSegs[0].2.1)) \
+  C \(f(podSegs[1].0.0)) \(f(podSegs[1].0.1)), \(f(podSegs[1].1.0)) \(f(podSegs[1].1.1)), \(f(podSegs[1].2.0)) \(f(podSegs[1].2.1)) \
+  C \(f(podSegs[2].0.0)) \(f(podSegs[2].0.1)), \(f(podSegs[2].1.0)) \(f(podSegs[2].1.1)), \(f(podSegs[2].2.0)) \(f(podSegs[2].2.1)) \
+  C \(f(podSegs[3].0.0)) \(f(podSegs[3].0.1)), \(f(podSegs[3].1.0)) \(f(podSegs[3].1.1)), \(f(podSegs[3].2.0)) \(f(podSegs[3].2.1)) \
+  Z
+  """
+let chordLines = chords.map { y in
+  """
+    <path d="M \(f(chordSpan.x0)) \(f(y - chordLift)) C \(f(0.39)) \(f(y + chordSag)), \(f(0.61)) \(f(y + chordSag)), \(f(chordSpan.x1)) \(f(y - chordLift))" fill="none" stroke="black" stroke-width="\(f(chordWidth))" stroke-linecap="round"/>
+  """
+}.joined(separator: "\n")
+
 let svg = """
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
     <defs>
@@ -177,14 +191,15 @@ let svg = """
         <stop offset="0" stop-color="#3c5a43"/>
         <stop offset="1" stop-color="#213427"/>
       </linearGradient>
-      <mask id="moon">
+      <mask id="mark">
         <rect width="64" height="64" fill="black"/>
-        <circle cx="\(f(moonCenter.x))" cy="\(f(moonCenter.y))" r="\(f(moonRadius))" fill="white"/>
-        <ellipse cx="\(f(terminatorCenter.x))" cy="\(f(terminatorCenter.y))" rx="\(f(terminatorSemi.x))" ry="\(f(terminatorSemi.y))" fill="black"/>
+        <line x1="\(f(0.5))" y1="\(f(threadTop))" x2="\(f(0.5))" y2="\(f(threadBottom))" stroke="white" stroke-width="\(f(threadWidth))" stroke-linecap="round"/>
+        <path d="\(podPath)" fill="white" stroke="white" stroke-width="\(f(podStroke))" stroke-linejoin="round"/>
+  \(chordLines)
       </mask>
     </defs>
     <rect width="64" height="64" rx="14.08" fill="url(#plate)"/>
-    <rect width="64" height="64" fill="#f4f1e8" mask="url(#moon)"/>
+    <rect width="64" height="64" fill="#f4f1e8" mask="url(#mark)"/>
   </svg>
   """
 try! svg.write(to: root.appendingPathComponent("site/src/favicon.svg"), atomically: true, encoding: .utf8)
