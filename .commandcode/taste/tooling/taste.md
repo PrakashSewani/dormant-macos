@@ -17,3 +17,5 @@
 - This machine's npm is configured with `NODE_ENV=production` / `omit=dev`, which silently
   strips devDependencies from installs — use explicit `npm ci --include=dev` (and record the
   gotcha in the repo's troubleshooting docs). Confidence: 0.7
+- Node/npm is not on the system PATH on this machine (nvm is sourced in `~/.zshrc` — interactive only, so even a login shell misses it — plus Homebrew at `/opt/homebrew/bin`): anything shelling out to dev tooling from a GUI-launched app inherits launchd's minimal PATH (`/usr/bin:/bin:/usr/sbin:/sbin`) and fails with exit 127 "no such file or directory" on `npm`. Don't wrap commands in a login shell (`/bin/zsh -l -c` doesn't help here); resolve executables against a hardcoded ordered list of known install locations (nvm newest-node-first, volta, bun, cargo, asdf shims, `~/.local/bin`, `~/go/bin`, Homebrew, `/usr/local…`, system dirs). Confidence: 0.8
+- Editor of choice is VS Code — the "Open a project" action is the hardcoded `code .`, with the VS Code app-bundle bin path (`/Applications/Visual Studio Code.app/Contents/Resources/app/bin`) included in tool lookup. Confidence: 0.85
