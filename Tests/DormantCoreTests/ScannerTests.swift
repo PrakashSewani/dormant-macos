@@ -176,4 +176,19 @@ import Testing
 
     #expect(report.added.first?.gitRemote == "git@example.com:x/y.git")
   }
+
+  @Test func importDirectoryRegistersDirectoryAndProjects() throws {
+    let workspace = try TempProject()
+    defer { workspace.destroy() }
+    let (sandbox, registry) = try makeRegistry()
+    defer { sandbox.destroy() }
+    try workspace.file("app/package.json", contents: "{}")
+
+    let report = try Scanner(registry: registry).importDirectory(at: workspace.root)
+
+    #expect(report.added.map { $0.name } == ["app"])
+    let dirs = try registry.allDirectories()
+    #expect(dirs.map(\.path) == [workspace.root.standardizedFileURL.path])
+    #expect(dirs.first?.lastScannedAt != nil)
+  }
 }

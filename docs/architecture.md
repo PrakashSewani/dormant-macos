@@ -20,8 +20,8 @@ One repository: the product and its promo site side by side.
 | Piece | Where | Responsibility |
 |---|---|---|
 | `DormantCore` | `Sources/DormantCore/` — static library, macOS 14+ | All logic: project detection and classification, size accounting, git inspection, SQLite registry, archive/restore engine, dependency-command detection. No UI. Fully unit-testable. |
-| `DormantApp` | `Sources/DormantApp/` — macOS app (accessory / `LSUIElement`, menu bar) | Menu bar item (`MenuBarExtra`), main window (project list, Project Info, settings), preview/confirm dialogs, executes the real operations. Handles `dormant://` URLs. |
-| `DormantFinder` | `Sources/DormantFinder/` — Finder Sync appex | Inline "Dormant ▸" context submenu on project folders. Forwards every action to the app via `dormant://`. Never performs destructive work itself. |
+| `DormantApp` | `Sources/DormantApp/` — macOS app (accessory / `LSUIElement`, menu bar) | Menu bar item (`MenuBarExtra`), main window (project list, Project Info), preview/confirm dialogs, executes the real operations. Handles `dormant://` URLs. |
+| `DormantFinder` | `Sources/DormantFinder/` — Finder Sync appex | Inline "Dormant ▸" context submenu on project folders: Clean, Archive, Restore, Import Folder in Dormant; empty-space clicks get Open Directory in Dormant (D-017). Forwards every action to the app via `dormant://`. Never performs destructive work itself. |
 | `site/` | `site/` — Eleventy (Nunjucks → static HTML) | The promo site: the product promise and the download link. |
 | (shared) | — | Nothing today. Product and site share no code. |
 
@@ -37,9 +37,9 @@ One repository: the product and its promo site side by side.
 
 Data lives on the user's machine only; nothing leaves it.
 
-**Registry** — `~/.dormant/registry.sqlite` (system libsqlite3; PRAGMA `user_version = 1`,
-`journal_mode=WAL`, `foreign_keys=ON`). Two tables (`last_scanned_at` is an addition to the
-earlier sketch of `projects`):
+**Registry** — `~/.dormant/registry.sqlite` (system libsqlite3; PRAGMA `user_version = 2`,
+`journal_mode=WAL`, `foreign_keys=ON`). Three tables (`last_scanned_at` is an addition to the
+earlier sketch of `projects`; `directories` is the schema v2 addition, D-017):
 
 ```sql
 CREATE TABLE projects (
@@ -62,13 +62,22 @@ CREATE TABLE archives (
   manifest_path TEXT   NOT NULL             -- absolute path to manifest.json
 );
 CREATE UNIQUE INDEX archives_one_per_project ON archives(project_id);
+CREATE TABLE directories (
+  id          TEXT    PRIMARY KEY,          -- UUID uuidString
+  name        TEXT    NOT NULL,
+  path        TEXT    NOT NULL UNIQUE,      -- standardized absolute path
+  created_at  TEXT    NOT NULL,             -- ISO-8601
+  last_scanned_at TEXT                     -- schema v2 addition (D-017)
+);
 ```
 
 All timestamps are ISO-8601 text. One archive per project (`UNIQUE(project_id)`); re-archiving
 replaces the row and the store directory. `store_path` is the absolute path to the tarball itself;
 `manifest_path` points at its sibling `manifest.json`. A dormant project keeps its `projects` row
 (`path` = the original location, which may not exist on disk) so archive-only projects stay
-restorable. Scan roots are user settings: persisted in **UserDefaults**, not the DB.
+restorable. `directories` holds the folders imported into Dormant (Finder import/open, app
+Scan…); a project groups under its deepest containing directory by path prefix — never by
+foreign key — and each directory row reports the whole folder's on-disk size (D-017).
 
 **Archive store** — `~/.dormant/store/<project-id>/core.tar.gz` + `manifest.json`, gzip tarball via
 `/usr/bin/tar`. Per D-003 the tarball contains **everything left after the clean step** (core +
@@ -218,12 +227,19 @@ run in the project root, sequentially:
 - The dialog lists each `display` verbatim (monospace) with its reason and cwd; confirm runs all
   (all-or-nothing in phase 2). Execution is sequential and stops at the first non-zero exit
   (report which command failed and which were not run), streamed output, cancellation between
-  commands. Executables resolve via the user's `PATH` (`/usr/bin/env`).
+  commands. Executables resolve through `ToolLocator`'s hardcoded search list (D-015): tool-manager
+  dirs (`~/.nvm/versions/node/*/bin`, newest node first, `~/.volta/bin`, `~/.bun/bin`,
+  `~/.cargo/bin`, `~/.asdf/shims`, `~/.local/bin`, `~/go/bin`), Homebrew (`/opt/homebrew/bin`,
+  `/opt/homebrew/sbin`), `/usr/local/bin`, `/usr/local/sbin`, `/usr/local/share/dotnet`, then the
+  system dirs. A name containing `/` (`.venv/bin/python`) resolves against the project root. A tool
+  not found fails with exit status 127 and a message listing the searched directories — no
+  fallback, no user configuration (supersedes the old `/usr/bin/env` + inherited `PATH` lookup).
 
 ## Shared plumbing
 
 `ProcessRunner` (Process wrapper: argv, cwd, env, captured stdout/stderr, exit code,
-cancellation), `Checksums` (SHA-256 via system CryptoKit), `DormantError` taxonomy (`notAProject`,
+cancellation), `ToolLocator` (hardcoded lookup of external executables — D-015), `Checksums`
+(SHA-256 via system CryptoKit), `DormantError` taxonomy (`notAProject`,
 `gitUnavailable`, `archiveExists`, `targetNotEmpty`, `tarFailed(stderr)`,
 `verificationFailed(details)`, `registryFailure`, `installCommandFailed(cmd, status, stderr)`).
 
@@ -282,7 +298,7 @@ Release (`.github/workflows/release.yml`): on tag `v*` → Release build → zip
 
 Phase 1 landed this scaffold as deliberately minimal code (menu bar item with a placeholder
 window, submenu routing, a module skeleton). Phase 2 replaced the placeholders with the real
-workflow described above: the app hosts the project list, the preview/confirm dialogs, Project
-Info and settings; the extension routes all six actions through `dormant://`; and `DormantCore`
+workflow described above: the app hosts the project list, the preview/confirm dialogs, and Project
+Info; the extension routes the Finder actions through `dormant://` (five as of D-017); and `DormantCore`
 holds the full engine behind the test suite run by `Scripts/check.sh`. Phase 3 replaced the
 placeholder `site/index.html` with the Eleventy promo site (D-009).

@@ -8,34 +8,97 @@ enum Bytes {
   }
 }
 
+struct ProjectRow: Identifiable {
+  let id: String
+  let title: String
+  let path: String
+  let record: ProjectRecord?
+  var children: [ProjectRow]?
+}
+
 @MainActor
 final class ProjectListModel: ObservableObject {
+  @Published private(set) var rows: [ProjectRow] = []
   @Published private(set) var projects: [ProjectRecord] = []
   @Published private(set) var sizeTexts: [String: String] = [:]
 
   func refresh() {
-    var rows: [ProjectRecord] = []
+    var projectRows: [ProjectRecord] = []
+    var directoryRows: [DirectoryRecord] = []
     if let registry = try? Registry(path: DormantPaths().registry) {
-      rows = (try? registry.allProjects()) ?? []
+      projectRows = (try? registry.allProjects()) ?? []
+      directoryRows = (try? registry.allDirectories()) ?? []
     }
-    projects = rows.sorted {
-      $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-    }
-    computeSizes(for: rows)
+    projects = projectRows
+    rows = Self.buildRows(directories: directoryRows, projects: projectRows)
+    computeSizes()
   }
 
   func scan(roots: [URL]) {
     Task {
       await Task.detached {
         if let registry = try? Registry(path: DormantPaths().registry) {
-          _ = try? Scanner(registry: registry).scan(roots: roots)
+          let scanner = Scanner(registry: registry)
+          for root in roots {
+            _ = try? scanner.importDirectory(at: root)
+          }
         }
       }.value
       NotificationCenter.default.post(name: .dormantDataChanged, object: nil)
     }
   }
 
-  private func computeSizes(for rows: [ProjectRecord]) {
+  func project(for id: String?) -> ProjectRecord? {
+    guard let id else { return nil }
+    return projects.first { $0.id == id }
+  }
+
+  private static func buildRows(
+    directories: [DirectoryRecord],
+    projects: [ProjectRecord]
+  ) -> [ProjectRow] {
+    var grouped: [String: [ProjectRecord]] = [:]
+    var ungrouped: [ProjectRecord] = []
+    for project in projects {
+      if let directory = DirectoryGrouping.deepestDirectory(for: project.path, in: directories) {
+        grouped[directory.path, default: []].append(project)
+      } else {
+        ungrouped.append(project)
+      }
+    }
+    var result: [ProjectRow] = []
+    for directory in directories.sorted(by: Self.alphabetical) {
+      let children = (grouped[directory.path] ?? []).sorted(by: Self.alphabetical).map {
+        Self.projectRow($0)
+      }
+      result.append(
+        ProjectRow(
+          id: "dir:\(directory.path)",
+          title: directory.name,
+          path: directory.path,
+          record: nil,
+          children: children.isEmpty ? nil : children
+        )
+      )
+    }
+    result += ungrouped.sorted(by: Self.alphabetical).map { Self.projectRow($0) }
+    return result
+  }
+
+  private static func projectRow(_ record: ProjectRecord) -> ProjectRow {
+    ProjectRow(id: record.id, title: record.name, path: record.path, record: record, children: nil)
+  }
+
+  private static func alphabetical(_ lhs: ProjectRecord, _ rhs: ProjectRecord) -> Bool {
+    lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+  }
+
+  private static func alphabetical(_ lhs: DirectoryRecord, _ rhs: DirectoryRecord) -> Bool {
+    lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+  }
+
+  private func computeSizes() {
+    let pending = Self.flatten(rows)
     Task {
       let computed = await Task.detached { () -> [String: String] in
         var result: [String: String] = [:]
@@ -45,14 +108,14 @@ final class ProjectListModel: ObservableObject {
         } catch {
           registry = nil
         }
-        for row in rows {
-          if row.state == .dormant {
-            if let archive = try? registry?.archive(projectID: row.id) {
+        for row in pending {
+          let url = URL(fileURLWithPath: row.path)
+          if let record = row.record, record.state == .dormant {
+            if let archive = try? registry?.archive(projectID: record.id) {
               result[row.id] = Bytes.format(archive.size)
             }
           } else {
-            let bytes = SizeAccounting.totalBytes(at: URL(fileURLWithPath: row.path))
-            result[row.id] = Bytes.format(bytes)
+            result[row.id] = Bytes.format(SizeAccounting.totalBytes(at: url))
           }
         }
         return result
@@ -60,16 +123,20 @@ final class ProjectListModel: ObservableObject {
       sizeTexts = computed
     }
   }
+
+  private static func flatten(_ rows: [ProjectRow]) -> [ProjectRow] {
+    rows + rows.flatMap { flatten($0.children ?? []) }
+  }
 }
 
 struct ProjectListView: View {
   @StateObject private var model = ProjectListModel()
   @State private var selection: Set<String> = []
-  @State private var showSettings = false
+  @Environment(\.openWindow) private var openWindow
 
   var body: some View {
     VStack(spacing: 0) {
-      if model.projects.isEmpty {
+      if model.rows.isEmpty {
         VStack(spacing: 8) {
           Text("No projects yet.").font(.headline)
           Text("Use Scan to find projects under a folder like ~/Projects.")
@@ -77,40 +144,47 @@ struct ProjectListView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else {
-        Table(model.projects, selection: $selection) {
-          TableColumn("Name") { record in
+        Table(model.rows, children: \.children, selection: $selection) {
+          TableColumn("Name") { row in
             HStack(spacing: 6) {
-              StateBadge(record: record)
-              Text(record.name)
+              if let record = row.record {
+                StateBadge(record: record)
+                Text(record.name)
+              } else {
+                Image(systemName: "folder")
+                Text(row.title).fontWeight(.semibold)
+              }
             }
           }
-          TableColumn("Path") { record in
-            Text(record.path)
+          TableColumn("Path") { row in
+            Text(row.path)
               .lineLimit(1)
               .truncationMode(.middle)
           }
           .width(min: 180)
-          TableColumn("Ecosystem") { record in
-            Text(record.ecosystem.slug)
+          TableColumn("Ecosystem") { row in
+            Text(row.record?.ecosystem.slug ?? "")
           }
           .width(80)
-          TableColumn("State") { record in
-            Text(stateText(record))
+          TableColumn("State") { row in
+            Text(row.record.map { stateText($0) } ?? "")
           }
           .width(80)
-          TableColumn("Size") { record in
-            Text(model.sizeTexts[record.id] ?? "…")
+          TableColumn("Size") { row in
+            Text(model.sizeTexts[row.id] ?? "…")
           }
           .width(80)
         }
         .contextMenu(forSelectionType: String.self) { ids in
-          Button("Open") { act(.open, ids) }
-          Button("Clean…") { act(.clean, ids) }
-          Button("Archive…") { act(.archive, ids) }
-          Button("Restore…") { act(.restore, ids) }
-          Divider()
-          Button("Project Info") { act(.projectInfo, ids) }
-          Button("Open Repository") { act(.openRepository, ids) }
+          if model.project(for: ids.first) != nil {
+            Button("Open") { act(.open, ids) }
+            Button("Clean…") { act(.clean, ids) }
+            Button("Archive…") { act(.archive, ids) }
+            Button("Restore…") { act(.restore, ids) }
+            Divider()
+            Button("Project Info") { act(.projectInfo, ids) }
+            Button("Open Repository") { act(.openRepository, ids) }
+          }
         }
       }
     }
@@ -119,13 +193,21 @@ struct ProjectListView: View {
       ToolbarItemGroup {
         Button("Scan…") { chooseRoots() }
         Button("Refresh") { model.refresh() }
-        Button("Settings…") { showSettings = true }
       }
     }
-    .sheet(isPresented: $showSettings) {
-      SettingsView(onClose: { showSettings = false })
+    .onAppear {
+      ActionPresenter.shared.openMain = { path in
+        openWindow(id: "main")
+        NSApp.activate(ignoringOtherApps: true)
+        if let path {
+          selection = ["dir:\(path)"]
+        }
+      }
+      if let pending = ActionPresenter.shared.takePendingSelection() {
+        selection = ["dir:\(pending)"]
+      }
+      model.refresh()
     }
-    .onAppear { model.refresh() }
     .onReceive(NotificationCenter.default.publisher(for: .dormantDataChanged)) { _ in
       model.refresh()
     }
@@ -174,37 +256,5 @@ struct StateBadge: View {
     if record.state == .dormant { return ("Dormant", .orange) }
     if !FileManager.default.fileExists(atPath: record.path) { return ("Missing", .red) }
     return ("Active", .green)
-  }
-}
-
-struct SettingsView: View {
-  let onClose: () -> Void
-  @AppStorage("editorCommand") private var editorCommand = ""
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      Text("Settings").font(.headline)
-      Text("Editor command")
-        .font(.subheadline)
-      Text(
-        "Used by the Open action. Use {path} for the project path, "
-          + "for example: cursor {path}. Leave empty to open the project folder in Finder."
-      )
-      .font(.caption)
-      .foregroundStyle(.secondary)
-      .fixedSize(horizontal: false, vertical: true)
-      TextField("cursor {path}", text: $editorCommand)
-        .textFieldStyle(.roundedBorder)
-        .frame(width: 360)
-      HStack {
-        Spacer()
-        Button("Done", action: onClose)
-          .keyboardShortcut(.defaultAction)
-          .controlSize(.large)
-          .buttonStyle(.borderedProminent)
-      }
-    }
-    .padding(20)
-    .frame(minWidth: 440)
   }
 }

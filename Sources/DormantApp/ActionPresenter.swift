@@ -11,6 +11,14 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
   static let shared = ActionPresenter()
 
   private var dialogWindow: NSWindow?
+  private var pendingSelection: String?
+
+  var openMain: ((String?) -> Void)?
+
+  func takePendingSelection() -> String? {
+    defer { pendingSelection = nil }
+    return pendingSelection
+  }
 
   func present(action: DormantAction, fileURL: URL) {
     switch action {
@@ -23,6 +31,10 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
       startArchive(fileURL)
     case .restore:
       startRestore(fileURL)
+    case .importFolder:
+      startImport(fileURL)
+    case .openDirectory:
+      startOpenDirectory(fileURL)
     case .projectInfo:
       startProjectInfo(fileURL)
     case .openRepository:
@@ -194,6 +206,55 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
     }
   }
 
+  private func startImport(_ fileURL: URL) {
+    Task {
+      do {
+        let report = try await Task.detached { () -> ScanReport in
+          let registry = try Registry(path: DormantPaths().registry)
+          return try Scanner(registry: registry).importDirectory(at: fileURL)
+        }.value
+        NotificationCenter.default.post(name: .dormantDataChanged, object: nil)
+        let total = report.added.count + report.updated.count + report.reappeared.count
+        guard total > 0 else {
+          showAlert(
+            title: "Nothing to import",
+            message: "No project found in \(fileURL.lastPathComponent)."
+          )
+          return
+        }
+        showAlert(
+          title: "Import finished",
+          message:
+            "\(report.added.count) added, \(report.updated.count) updated, "
+            + "\(report.reappeared.count) re-activated in \(fileURL.lastPathComponent)."
+        )
+      } catch {
+        showAlert(title: "Import failed", message: "\(error)")
+      }
+    }
+  }
+
+  private func startOpenDirectory(_ fileURL: URL) {
+    Task {
+      do {
+        _ = try await Task.detached { () -> ScanReport in
+          let registry = try Registry(path: DormantPaths().registry)
+          return try Scanner(registry: registry).importDirectory(at: fileURL)
+        }.value
+        NotificationCenter.default.post(name: .dormantDataChanged, object: nil)
+        let path = fileURL.standardizedFileURL.path
+        if let openMain {
+          openMain(path)
+        } else {
+          pendingSelection = path
+          NSApp.activate(ignoringOtherApps: true)
+        }
+      } catch {
+        showAlert(title: "Open Directory failed", message: "\(error)")
+      }
+    }
+  }
+
   private func startProjectInfo(_ fileURL: URL) {
     Task {
       _ = await resolveRecord(for: fileURL)
@@ -205,25 +266,34 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
   }
 
   private func open(_ fileURL: URL) {
-    let template = UserDefaults.standard.string(forKey: "editorCommand") ?? ""
-    let trimmed = template.trimmingCharacters(in: .whitespaces)
-    guard !trimmed.isEmpty else {
-      NSWorkspace.shared.open(fileURL)
+    guard
+      let code = ToolLocator.url(
+        for: "code",
+        extraDirectories: ToolLocator.visualStudioCodeDirectories
+      )
+    else {
+      showAlert(
+        title: "Visual Studio Code not found",
+        message:
+          "Dormant opens projects with `code .` (VS Code), but the `code` command "
+          + "was not found in any known install location."
+      )
       return
     }
-    let parts = trimmed.split(separator: " ").map(String.init)
-    let executable = parts.first ?? ""
-    var arguments = parts.dropFirst().map {
-      $0.replacingOccurrences(of: "{path}", with: fileURL.path)
-    }
-    if !trimmed.contains("{path}") {
-      arguments.append(fileURL.path)
-    }
-    Task.detached {
-      _ = try? ProcessRunner().run(
-        executable: URL(fileURLWithPath: "/usr/bin/env"),
-        arguments: [executable] + arguments
-      )
+    Task {
+      do {
+        let result = try await Task.detached { () -> ProcessResult in
+          try ProcessRunner().run(executable: code, arguments: ["."], cwd: fileURL)
+        }.value
+        if result.exitCode != 0 {
+          showAlert(
+            title: "Open failed",
+            message: "code exited with status \(result.exitCode).\n\(result.stderr)"
+          )
+        }
+      } catch {
+        showAlert(title: "Open failed", message: "\(error)")
+      }
     }
   }
 

@@ -8,13 +8,23 @@ final class FinderSync: FIFinderSync {
   }
 
   override func menu(for menuKind: FIMenuKind) -> NSMenu {
-    let menu = NSMenu(title: "Dormant")
-    menu.addItem(makeItem(title: "Open", action: #selector(open(_:))))
-    menu.addItem(makeItem(title: "Clean", action: #selector(clean(_:))))
-    menu.addItem(makeItem(title: "Archive", action: #selector(archive(_:))))
-    menu.addItem(makeItem(title: "Restore", action: #selector(restore(_:))))
-    menu.addItem(makeItem(title: "Project Info", action: #selector(projectInfo(_:))))
-    menu.addItem(makeItem(title: "Open Repository", action: #selector(openRepository(_:))))
+    let menu = NSMenu(title: "")
+    let root = NSMenuItem(title: "Dormant", action: nil, keyEquivalent: "")
+    let submenu = NSMenu(title: "Dormant")
+    if menuKind == .contextualMenuForContainer {
+      submenu.addItem(
+        makeItem(title: "Open Directory in Dormant", action: #selector(openDirectory(_:)))
+      )
+    } else {
+      submenu.addItem(makeItem(title: "Clean", action: #selector(clean(_:))))
+      submenu.addItem(makeItem(title: "Archive", action: #selector(archive(_:))))
+      submenu.addItem(makeItem(title: "Restore", action: #selector(restore(_:))))
+      submenu.addItem(
+        makeItem(title: "Import Folder in Dormant", action: #selector(importFolder(_:)))
+      )
+    }
+    root.submenu = submenu
+    menu.addItem(root)
     return menu
   }
 
@@ -22,10 +32,6 @@ final class FinderSync: FIFinderSync {
     let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
     item.target = self
     return item
-  }
-
-  @objc private func open(_ sender: Any?) {
-    route(action: "open")
   }
 
   @objc private func clean(_ sender: Any?) {
@@ -40,12 +46,12 @@ final class FinderSync: FIFinderSync {
     route(action: "restore")
   }
 
-  @objc private func projectInfo(_ sender: Any?) {
-    route(action: "project-info")
+  @objc private func importFolder(_ sender: Any?) {
+    route(action: "import")
   }
 
-  @objc private func openRepository(_ sender: Any?) {
-    route(action: "open-repository")
+  @objc private func openDirectory(_ sender: Any?) {
+    route(action: "open-directory")
   }
 
   private func route(action: String) {

@@ -106,7 +106,9 @@ description: Dormant separates the source you wrote from the gigabytes your tool
       <div class="move-body">
         <h3>Restore</h3>
         <p>Unpack to the original path, verify every file against the manifest checksums, and show
-          the exact install commands before running a single one.</p>
+          the exact install commands before running a single one. Your tools are found where you
+          installed them — npm under nvm, pnpm under Homebrew, uv, cargo, go — and a missing tool
+          fails loudly instead of being skipped.</p>
         <p class="move-safety">If verification fails, the archive stays put and the extracted tree is
           left for inspection.</p>
       </div>
@@ -122,9 +124,41 @@ description: Dormant separates the source you wrote from the gigabytes your tool
 Nothing runs until you confirm.</code></pre>
   </div>
 
-  <p class="also">Also in the menu: <strong>Project Info</strong> (local size versus core versus
-    regenerable, git status, branch, remote), <strong>Open</strong> in your configured editor, and
-    <strong>Open Repository</strong> in the browser.</p>
+  <p class="also">From the app: <strong>Project Info</strong> (local size versus core versus
+    regenerable, git status, branch, remote), <strong>Open</strong> in VS Code, and
+    <strong>Open Repository</strong> in the browser. From Finder, a <strong>Dormant ▸</strong>
+    right-click menu: Clean, Archive, Restore and Import Folder in Dormant on a folder; Open
+    Directory in Dormant on empty space.</p>
+</section>
+
+<section class="directories" id="directories" aria-labelledby="directories-title">
+  <h2 id="directories-title">Every workspace, by directory</h2>
+  <p class="section-lede">Work projects in one folder, personal projects in another? Import each
+    folder once and Dormant keeps the grouping — and shows how much disk every directory is
+    eating: the whole folder on disk, projects, dependencies, build output and all.</p>
+
+  <article class="ledger" aria-label="Directory view with per-directory disk usage">
+    <header class="ledger-head">
+      <span class="ledger-title">Dormant — directories</span>
+      <span class="ledger-total">18.7 GB</span>
+    </header>
+    <p class="ledger-path">grouped by imported folder</p>
+    <table class="ledger-table">
+      <tbody>
+        <tr><td>Work</td><td class="num">14.2 GB</td><td class="kind kind-re">6 projects</td></tr>
+        <tr><td>Personal</td><td class="num">4.5 GB</td><td class="kind kind-re">2 projects</td></tr>
+      </tbody>
+    </table>
+    <p class="ledger-note">Each directory expands to its projects with their own sizes. Clean and
+      Archive act per project; the directory total tells you where the gigabytes are before you
+      pick one.</p>
+  </article>
+
+  <div class="restore-proof">
+    <p class="restore-label">Right-click in Finder</p>
+    <pre><code>on a folder      Dormant ▸  Clean · Archive · Restore · Import Folder in Dormant
+on empty space   Dormant ▸  Open Directory in Dormant</code></pre>
+  </div>
 </section>
 
 <section class="rules" id="rules" aria-labelledby="rules-title">

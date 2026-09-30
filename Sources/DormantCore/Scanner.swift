@@ -49,6 +49,14 @@ public struct Scanner {
     return try upsert(at: dir, manifests: manifests).record
   }
 
+  @discardableResult
+  public func importDirectory(at dir: URL) throws -> ScanReport {
+    let dir = dir.standardizedFileURL
+    _ = try registry.upsertDirectory(path: dir.path, name: dir.lastPathComponent)
+    try registry.markDirectoryScanned(path: dir.path)
+    return try scan(roots: [dir])
+  }
+
   private func visit(
     _ dir: URL,
     depth: Int,

@@ -106,6 +106,50 @@ import Testing
     #expect(result.completed == [command])
     #expect(box.value.contains("hello"))
   }
+
+  @Test func bareNameResolvesThroughToolLocator() throws {
+    let project = try TempProject()
+    defer { project.destroy() }
+    let command = InstallCommand(executable: "sh", arguments: ["-c", "echo hello"], reason: "t")
+
+    let result = InstallRunner().run([command], in: project.root)
+
+    #expect(result.failure == nil)
+    #expect(result.completed == [command])
+  }
+
+  @Test func missingToolFailsWith127AndStops() throws {
+    let project = try TempProject()
+    defer { project.destroy() }
+    let missing = InstallCommand(
+      executable: "dormant-no-such-tool-xyz", arguments: ["install"], reason: "t"
+    )
+    let never = InstallCommand(executable: "/bin/sh", arguments: ["-c", "echo no"], reason: "t")
+
+    let result = InstallRunner().run([missing, never], in: project.root)
+
+    #expect(result.completed.isEmpty)
+    #expect(result.failure?.status == 127)
+    #expect(result.failure?.command == missing)
+    #expect(result.failure?.notRun == [never])
+    #expect(result.failure?.stderr.contains("dormant-no-such-tool-xyz") == true)
+    #expect(result.failure?.stderr.contains("Searched") == true)
+  }
+
+  @Test func relativeExecutableResolvesUnderProjectRoot() throws {
+    let project = try TempProject()
+    defer { project.destroy() }
+    let command = InstallCommand(
+      executable: ".venv/bin/python", arguments: ["--version"], reason: "t"
+    )
+
+    let result = InstallRunner().run([command], in: project.root)
+
+    #expect(result.completed.isEmpty)
+    #expect(result.failure?.status == 127)
+    #expect(result.failure?.stderr.contains(".venv/bin/python") == true)
+    #expect(result.failure?.stderr.contains(project.root.path) == true)
+  }
 }
 
 private final class OutputBox: @unchecked Sendable {

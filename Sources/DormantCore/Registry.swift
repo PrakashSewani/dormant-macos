@@ -26,6 +26,14 @@ public struct ArchiveRecord: Sendable {
   public let manifestPath: String
 }
 
+public struct DirectoryRecord: Sendable, Identifiable {
+  public let id: String
+  public let name: String
+  public let path: String
+  public let createdAt: Date
+  public let lastScannedAt: Date?
+}
+
 public struct Registry {
   let db: SQLiteDB
 
@@ -102,6 +110,47 @@ public struct Registry {
   }
 
   @discardableResult
+  public func upsertDirectory(path: String, name: String) throws -> DirectoryRecord {
+    let standardized = URL(fileURLWithPath: path).standardizedFileURL.path
+    let timestamp = iso8601(Date())
+    try db.run(
+      """
+      INSERT INTO directories (id, name, path, created_at, last_scanned_at)
+      VALUES (?, ?, ?, ?, NULL)
+      ON CONFLICT(path) DO UPDATE SET
+        name = excluded.name
+      """,
+      binds: [.text(UUID().uuidString), .text(name), .text(standardized), .text(timestamp)]
+    )
+    guard let record = try directory(path: standardized) else {
+      throw RegistryError(message: "directory row missing after upsert at \(standardized)")
+    }
+    return record
+  }
+
+  public func directory(path: String) throws -> DirectoryRecord? {
+    let standardized = URL(fileURLWithPath: path).standardizedFileURL.path
+    let rows = try db.query(
+      "SELECT * FROM directories WHERE path = ?", binds: [.text(standardized)])
+    guard let row = rows.first else {
+      return nil
+    }
+    return try Self.directoryRecord(row)
+  }
+
+  public func allDirectories() throws -> [DirectoryRecord] {
+    try db.query("SELECT * FROM directories").map { try Self.directoryRecord($0) }
+  }
+
+  public func markDirectoryScanned(path: String) throws {
+    let standardized = URL(fileURLWithPath: path).standardizedFileURL.path
+    let timestamp = iso8601(Date())
+    try db.run(
+      "UPDATE directories SET last_scanned_at = ? WHERE path = ?",
+      binds: [.text(timestamp), .text(standardized)])
+  }
+
+  @discardableResult
   public func recordArchive(
     projectID: String,
     storePath: String,
@@ -168,9 +217,15 @@ public struct Registry {
     case 0:
       try db.transaction {
         try db.exec(Self.schemaV1)
-        try db.exec("PRAGMA user_version = 1")
+        try db.exec(Self.schemaV2)
+        try db.exec("PRAGMA user_version = 2")
       }
     case 1:
+      try db.transaction {
+        try db.exec(Self.schemaV2)
+        try db.exec("PRAGMA user_version = 2")
+      }
+    case 2:
       break
     default:
       throw RegistryError(message: "unsupported registry schema version \(version)")
@@ -204,6 +259,18 @@ public struct Registry {
     )
   }
 
+  private static func directoryRecord(_ row: [String: SQLValue]) throws -> DirectoryRecord {
+    DirectoryRecord(
+      id: try rowText(row, "id"),
+      name: try rowText(row, "name"),
+      path: try rowText(row, "path"),
+      createdAt: try date(fromISO8601: try rowText(row, "created_at")),
+      lastScannedAt: try rowOptionalText(row, "last_scanned_at").map {
+        try date(fromISO8601: $0)
+      }
+    )
+  }
+
   private static let schemaV1 = """
     CREATE TABLE projects (
       id          TEXT    PRIMARY KEY,
@@ -225,6 +292,16 @@ public struct Registry {
       manifest_path TEXT   NOT NULL
     );
     CREATE UNIQUE INDEX archives_one_per_project ON archives(project_id);
+    """
+
+  private static let schemaV2 = """
+    CREATE TABLE directories (
+      id          TEXT    PRIMARY KEY,
+      name        TEXT    NOT NULL,
+      path        TEXT    NOT NULL UNIQUE,
+      created_at  TEXT    NOT NULL,
+      last_scanned_at TEXT
+    );
     """
 }
 
