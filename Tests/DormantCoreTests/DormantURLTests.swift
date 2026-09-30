@@ -7,8 +7,26 @@ import Testing
   @Test(
     "Finder Sync slugs round-trip to actions",
     arguments: zip(
-      ["open", "clean", "archive", "restore", "project-info", "open-repository"],
-      [DormantAction.open, .clean, .archive, .restore, .projectInfo, .openRepository]
+      [
+        "open",
+        "clean",
+        "archive",
+        "restore",
+        "import",
+        "open-directory",
+        "project-info",
+        "open-repository",
+      ],
+      [
+        DormantAction.open,
+        .clean,
+        .archive,
+        .restore,
+        .importFolder,
+        .openDirectory,
+        .projectInfo,
+        .openRepository,
+      ]
     )
   )
   func slugRoundTrip(slug: String, action: DormantAction) throws {

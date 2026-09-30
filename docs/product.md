@@ -29,10 +29,13 @@ cycle explicit, safe, and reversible.
 
 ## Actions
 
-Available from a Finder right-click menu on a project folder and from the app itself:
+Available from the app itself; the Finder right-click "Dormant ▸" hover submenu carries Clean,
+Archive, Restore, and Import Folder in Dormant on a folder, and Open Directory in Dormant on
+empty space (D-016, D-017):
 
-- **Open** — open the project in the user's configured/default development environment. Never
-  modifies the project.
+- **Open** (app) — open the project in VS Code (`code .`, hardcoded — D-015 supersedes D-006).
+  If `code` is not found, Dormant reports an error; it never falls back to opening Finder.
+  Never modifies the project.
 - **Clean** — keep the project, remove regenerable development state. Shows an understandable
   preview of what will be removed and how much space is reclaimed before anything happens.
   Never deletes arbitrary files because they are large. The removal is permanent (nothing is
@@ -44,9 +47,14 @@ Available from a Finder right-click menu on a project folder and from the app it
 - **Restore** — bring a dormant project back as a working development workspace: decompress the
   archive, then detect ecosystem dependency commands and show exactly what will run, running them
   only after the user confirms.
-- **Project Info** — why a project is consuming disk: location, remote, branch, git status, last
-  commit, local size vs core vs regenerable size, Active/Dormant status.
-- **Open Repository** — open the project's git remote in the browser (any common host, no
+- **Import Folder in Dormant** (Finder) — scan the folder for projects (the app's Scan… function)
+  and register them in the local registry.
+- **Open Directory in Dormant** (Finder, empty-space right-click) — open the folder in the app:
+  it is imported as a Dormant directory (with its projects) and selected in the main window.
+  Shown on empty-space clicks only, never on folder items (D-017).
+- **Project Info** (app) — why a project is consuming disk: location, remote, branch, git status,
+  last commit, local size vs core vs regenerable size, Active/Dormant status.
+- **Open Repository** (app) — open the project's git remote in the browser (any common host, no
   Dormant backend); unavailable when there is no remote.
 
 ## Decisions captured in requirements (2026-09-26)
@@ -54,12 +62,17 @@ Available from a Finder right-click menu on a project folder and from the app it
 - **Archive storage strategy:** clean regenerable state, compress what remains to a local archive
   (`~/.dormant/store/`), remove the working copy. Restore = decompress + rebuild. Fully offline;
   no git remote or account required to recover.
-- **App surface:** menu bar app with a main window (project list, info, settings); Finder actions
-  show their confirmation dialogs.
+- **App surface:** menu bar app with a main window (project list, info); Finder actions show their
+  confirmation dialogs.
 - **Project tracking:** local registry (scanning a root the user chooses, e.g. `~/Projects`) plus
   an index of every archive Dormant creates — this is what makes dormant projects identifiable
   and restorable.
+- **Directories:** imported folders (e.g. `~/Projects/Work`, `~/Projects/Personal`) are tracked
+  as directories; the app groups their projects and shows how much disk each directory is eating
+  — the whole folder on disk: projects, dependencies, build output, everything (D-017).
 - **Restore dependency commands:** detected commands are shown and confirmed before running.
+  Tools resolve from hardcoded, known install locations (D-015); a missing tool is a hard error,
+  never a silent skip or fallback.
 
 ## Safety requirements (non-negotiable)
 

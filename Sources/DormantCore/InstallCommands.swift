@@ -154,10 +154,21 @@ public struct InstallRunner {
     var completed: [InstallCommand] = []
     for (index, command) in commands.enumerated() {
       let notRun = Array(commands.dropFirst(index + 1))
+      guard let executable = Self.resolve(command.executable, root: root) else {
+        return InstallResult(
+          completed: completed,
+          failure: InstallFailure(
+            command: command,
+            status: 127,
+            stderr: Self.notFoundMessage(for: command.executable, root: root),
+            notRun: notRun
+          )
+        )
+      }
       do {
         let result = try processRunner.run(
-          executable: URL(fileURLWithPath: "/usr/bin/env"),
-          arguments: [command.executable] + command.arguments,
+          executable: executable,
+          arguments: command.arguments,
           cwd: root,
           onStdout: { onOutput?(String(decoding: $0, as: UTF8.self)) },
           onStderr: { onOutput?(String(decoding: $0, as: UTF8.self)) }
@@ -187,5 +198,20 @@ public struct InstallRunner {
       }
     }
     return InstallResult(completed: completed, failure: nil)
+  }
+
+  private static func resolve(_ name: String, root: URL) -> URL? {
+    guard name.contains("/") else {
+      return ToolLocator.url(for: name)
+    }
+    let url = name.hasPrefix("/") ? URL(fileURLWithPath: name) : root.appendingPathComponent(name)
+    return FileManager.default.isExecutableFile(atPath: url.path) ? url.standardizedFileURL : nil
+  }
+
+  private static func notFoundMessage(for name: String, root: URL) -> String {
+    guard name.contains("/") else {
+      return ToolLocator.notFoundMessage(for: name)
+    }
+    return "'\(name)' was not found under \(root.path)"
   }
 }

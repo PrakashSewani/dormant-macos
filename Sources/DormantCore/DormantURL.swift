@@ -5,6 +5,8 @@ public enum DormantAction: String, CaseIterable, Sendable {
   case clean
   case archive
   case restore
+  case importFolder = "import"
+  case openDirectory = "open-directory"
   case projectInfo = "project-info"
   case openRepository = "open-repository"
 }

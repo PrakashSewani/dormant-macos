@@ -437,3 +437,115 @@ images (dock and browser-tab mockups, favicon size ladder). The human chose the 
 **Cost / risk:** the wrap chords fade below ~24 px (the pod-and-thread silhouette still reads);
 a cocoon is less literal than a folder for a file tool — the tagline and site copy carry the
 metaphor.
+
+## D-015: External tools — hardcoded lookup paths and hard errors (supersedes D-006)
+
+**Date:** 2026-09-30
+
+**Context:** Restore's dependency commands ran via `/usr/bin/env` with the GUI app's inherited
+launchd PATH (`/usr/bin:/bin:/usr/sbin:/sbin`), so `npm install` exited 127 ("no such file or
+directory"): tool managers like nvm are only on PATH inside a shell profile (`~/.zshrc`,
+`~/.zprofile`), which a GUI app never sees. The same blind spot hit every package manager and
+`code`. D-006's Open action asked for a user-configured editor command and silently fell back to
+opening the folder in Finder. The human: fix it for **every** package manager, hardcode the
+lookup paths ("don't ask for custom path from user"), and when a tool is unavailable throw
+errors — never fall back to opening Finder. Open is `code .` (VS Code), hardcoded.
+
+**Decision:**
+
+- **`ToolLocator` searches a hardcoded, ordered list of known install locations** for every
+  external tool — all install commands (`npm`, `pnpm`, `yarn`, `bun`, `uv`, `poetry`, `python3`,
+  `cargo`, `dotnet`, `go`) and `code`: tool-manager dirs (`~/.nvm/versions/node/*/bin`, newest
+  node first, `~/.volta/bin`, `~/.bun/bin`, `~/.cargo/bin`, `~/.asdf/shims`, `~/.local/bin`,
+  `~/go/bin`), Homebrew (`/opt/homebrew/bin`, `/opt/homebrew/sbin`), `/usr/local/bin`,
+  `/usr/local/sbin`, `/usr/local/share/dotnet`, then the system dirs (`/usr/bin`, `/bin`,
+  `/usr/sbin`, `/sbin`). `code` additionally searches
+  `/Applications/Visual Studio Code.app/Contents/Resources/app/bin`. An executable name
+  containing `/` (`.venv/bin/python`) resolves against the project root. No user-facing
+  configuration anywhere.
+- **A missing tool is a hard error.** An install command whose executable is not found fails with
+  exit status 127 and a message naming what was searched; later commands do not run. Open shows
+  an error alert. D-006's Finder fallback is removed.
+- **Open runs `code .`** in the project directory. The editor-command setting is deleted.
+
+**Considered and rejected:**
+
+- **Login shell (`zsh -l -c`)** — still misses `~/.zshrc` tool managers (nvm is sourced there);
+  an interactive shell sources rc files with side effects and stray output.
+- **User-configurable tool paths** — the human wants it hardcoded.
+- **Fallbacks (open Finder, skip the command)** — the human wants thrown errors.
+
+**Cost / risk:** a tool in an exotic location is not found; the error message lists the searched
+directories so the gap is visible. Supporting a new manager means editing one list in
+`ToolLocator`.
+
+## D-016: Finder submenu — Clean, Archive, Restore, Import Folder in Dormant
+
+**Date:** 2026-09-30
+
+**Context:** The Finder "Dormant ▸" submenu carried six items (Open, Clean, Archive, Restore,
+Project Info, Open Repository). The human wants the hover menu to show the folder actions plus a
+way to get a folder into Dormant from Finder: Clean, Archive, Restore, and "Import Folder in
+dormant" — the app's scan function.
+
+**Decision:**
+
+- The Finder "Dormant ▸" hover submenu is exactly: **Clean, Archive, Restore, Import Folder in
+  Dormant**. Routing stays D-011's `dormant://` URLs into the app.
+- **Explicit "Dormant" root item:** Finder inserts the returned `NSMenu`'s items flat into the
+  context menu and never displays the menu's title — confirmed on the human's machine. The
+  extension therefore nests its four actions under an explicit "Dormant" root item with a
+  submenu, which is what produces the hover flyout.
+- **Import Folder in Dormant** runs the same scan as the app's Scan… (`Scanner.scan(roots:)`,
+  depth 3) on the selected folder and reports added / updated / reappeared projects in an alert.
+- Open, Project Info and Open Repository remain in the app's project-list context menu only.
+
+**Considered and rejected:**
+
+- **Keeping all six items in Finder** — the human asked for these four.
+- **Open from Finder** — `code .` belongs to the app's project list (D-015).
+
+**Cost / risk:** the three app-only actions are less discoverable from Finder; they stay one
+click away in the app's project list.
+
+## D-017: Directories are first-class — grouping, whole-folder sizes, and menu placement
+
+**Date:** 2026-09-30
+
+**Context:** A developer keeps projects in a few top-level folders (e.g. `~/Projects/Work`,
+`~/Projects/Personal`) and wants to see how much disk each of those folders eats, not just each
+project. The human also scoped the new Finder action: right-clicking a **folder** must not offer
+"Open Directory in Dormant"; right-clicking **empty space** (the folder being browsed) must offer
+it. Decided with the human 2026-09-30: (a) folder menu keeps exactly the D-016 four items,
+(b) a "directory" is a folder explicitly imported into Dormant (Finder import/open, app Scan…),
+not an auto-derived parent, (c) "space being eaten" is the **whole folder on disk** (projects,
+`node_modules`, build output, untracked files), (d) "Open Directory in Dormant" shows on
+empty-space clicks **everywhere** and opening adds the directory to Dormant automatically — so
+the sandboxed extension needs no knowledge of the registry.
+
+**Decision:**
+
+- **Directories are registry state** (`directories` table, schema v2): a folder becomes one when
+  imported via Finder "Import Folder in Dormant" / "Open Directory in Dormant" or the app's
+  Scan…. The app maintains projects grouped under their deepest containing directory;
+  ungrouped projects stay top-level.
+- **Per-directory size = `SizeAccounting.totalBytes` of the whole folder subtree** — the real
+  disk usage, not the sum of tracked projects. Directory rows show it alongside project rows.
+- **Finder menu placement (refines D-016):** folder-item clicks → Clean, Archive, Restore,
+  Import Folder in Dormant (no open-directory item); empty-space (container) clicks →
+  "Open Directory in Dormant" alone. Both under the explicit "Dormant ▸" root item.
+- **Open Directory in Dormant** imports the directory (registry + scan of projects inside),
+  then opens the app's main window with that directory selected.
+
+**Considered and rejected:**
+
+- **Auto-derived parent groups** — the human wants explicit imports only.
+- **Sum-of-tracked-projects as the size** — misses the regenerable state Dormant exists to
+  reclaim; the whole-folder measure shows what Clean/Archive can save.
+- **Menu conditional on "is inside a Dormant directory"** — rejected: showing the item
+  everywhere and auto-adding avoids shared state between the sandboxed extension and the app
+  (D-011).
+
+**Cost / risk:** whole-folder sizes re-walk the subtree on every refresh (computed off the main
+thread like project sizes); nested imported directories each show their own subtree size, which
+is intentional ("what does this folder eat") rather than a sum-to-total.

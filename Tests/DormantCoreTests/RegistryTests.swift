@@ -13,11 +13,11 @@ import Testing
     try body(registry, registryURL)
   }
 
-  @Test("fresh database is created and migrated to schema v1")
+  @Test("fresh database is created and migrated to schema v2")
   func createsAndMigrates() throws {
     try withRegistry { registry, _ in
       let userVersion = try registry.db.query("PRAGMA user_version")
-      #expect(intValue(userVersion.first, "user_version") == 1)
+      #expect(intValue(userVersion.first, "user_version") == 2)
       let journalMode = try registry.db.query("PRAGMA journal_mode")
       #expect(textValue(journalMode.first, "journal_mode") == "wal")
       let foreignKeys = try registry.db.query("PRAGMA foreign_keys")
@@ -28,6 +28,7 @@ import Testing
         .map { textValue($0, "name") }
       #expect(tables.contains("projects"))
       #expect(tables.contains("archives"))
+      #expect(tables.contains("directories"))
     }
   }
 
@@ -41,7 +42,7 @@ import Testing
       #expect(projects.count == 1)
       #expect(projects.first?.name == "Kept")
       let userVersion = try reopened.db.query("PRAGMA user_version")
-      #expect(intValue(userVersion.first, "user_version") == 1)
+      #expect(intValue(userVersion.first, "user_version") == 2)
     }
   }
 
@@ -269,6 +270,55 @@ import Testing
       #expect(reloaded?.state == .dormant)
     }
   }
+
+  @Test("directory upsert is keyed by path and markDirectoryScanned stamps it")
+  func directoryUpsertAndScan() throws {
+    try withRegistry { registry, _ in
+      let first = try registry.upsertDirectory(path: "/projects/work", name: "Work")
+      let second = try registry.upsertDirectory(path: "/projects/work", name: "Work Renamed")
+      #expect(second.id == first.id)
+      #expect(second.createdAt == first.createdAt)
+      #expect(second.name == "Work Renamed")
+      #expect(second.lastScannedAt == nil)
+      let all = try registry.allDirectories()
+      #expect(all.count == 1)
+      try registry.markDirectoryScanned(path: "/projects/work")
+      let fetched = try registry.directory(path: "/projects/work")
+      let scanned = try #require(fetched)
+      #expect(scanned.id == first.id)
+      #expect(scanned.lastScannedAt != nil)
+    }
+  }
+
+  @Test("schema v1 databases are upgraded to v2 in place")
+  func migratesV1ToV2() throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent("dormant-registry-tests-\(UUID().uuidString)", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let registryURL = directory.appendingPathComponent("registry.sqlite")
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let v1db = try SQLiteDB(path: registryURL.path)
+    try v1db.exec(schemaV1DDL)
+    try v1db.exec("PRAGMA user_version = 1")
+    try v1db.exec(
+      """
+      INSERT INTO projects (id, name, path, ecosystem, state, git_remote,
+        created_at, updated_at, last_scanned_at)
+      VALUES ('kept', 'Kept', '/projects/kept', 'go', 'active', NULL,
+        '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z', NULL)
+      """)
+
+    let registry = try Registry(path: registryURL)
+
+    let userVersion = try registry.db.query("PRAGMA user_version")
+    #expect(intValue(userVersion.first, "user_version") == 2)
+    let projects = try registry.allProjects()
+    #expect(projects.map(\.name) == ["Kept"])
+    let dirs = try registry.allDirectories()
+    #expect(dirs.isEmpty)
+    let record = try registry.upsertDirectory(path: "/projects/work", name: "Work")
+    #expect(record.path == "/projects/work")
+  }
 }
 
 private func textValue(_ row: [String: SQLValue]?, _ column: String) -> String? {
@@ -284,3 +334,26 @@ private func intValue(_ row: [String: SQLValue]?, _ column: String) -> Int64? {
   }
   return value
 }
+
+private let schemaV1DDL = """
+  CREATE TABLE projects (
+    id          TEXT    PRIMARY KEY,
+    name        TEXT    NOT NULL,
+    path        TEXT    NOT NULL UNIQUE,
+    ecosystem   TEXT    NOT NULL,
+    state       TEXT    NOT NULL CHECK (state IN ('active','dormant')),
+    git_remote  TEXT,
+    created_at  TEXT    NOT NULL,
+    updated_at  TEXT    NOT NULL,
+    last_scanned_at TEXT
+  );
+  CREATE TABLE archives (
+    id           TEXT    PRIMARY KEY,
+    project_id   TEXT    NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    store_path   TEXT    NOT NULL,
+    created_at   TEXT    NOT NULL,
+    size         INTEGER NOT NULL,
+    manifest_path TEXT   NOT NULL
+  );
+  CREATE UNIQUE INDEX archives_one_per_project ON archives(project_id);
+  """

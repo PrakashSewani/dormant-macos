@@ -15,31 +15,39 @@ rule 4. Keep exactly one phase `in progress`.
 
 ## Current handoff
 
-- **Phase:** 4 — launch. The icon work is on `feature/icon-cocoon` → PR → `dev` (this session).
-- **Done this session:** (1) **D-014** — new mark, the **cocoon**: nine witty candidates (paused,
-  folder with Z, standby glyph, tucked-in, vacuum bag, tin can, cocoon, hammock, seed) were
-  rendered as app icon + favicon product images (dock and browser-tab mockups, favicon size
-  ladder, contact sheet in `build/icon-concepts/`); the human chose the cocoon — a pod hanging
-  from a thread with two silk wraps, "hatches exactly when you need it". `Scripts/render-icons.swift`
-  redraws it (wrap chords refined to curved bands crossing the pod); every app icon size, favicon
-  and the favicon SVG regenerate from that one script. (2) Scrubbed the stray flag reference from
-  the public repo: the two icon commit bodies reworded via history rewrite (`dev` force-pushed,
-  merged `feature/icon-two-circles` deleted from origin), PR #5 body edited, D-013 wording
-  neutralized. Residual: the phrase still exists inside old commit *file contents* (e.g. D-013's
-  text as committed in `71d5537`) and in PR #5's frozen commit list — a full
-  `git filter-repo` purge would clear those if ever needed.
-- **Verified:** `Scripts/check.sh` end to end — lint (pre-existing Dialogs.swift warnings only),
-  generate, build OK, **89 tests / 12 suites pass**, site builds (8 assets copied). Icon sizes and
-  favicon SVG regenerated from the one script and eyeballed at 1024/512/48/32 px.
-- **Landing:** `feature/icon-cocoon` → PR → `dev` (D-007), this session.
-- **Blocked by:** (1) the manual Finder round trip on the fixed extension (enable in System
-  Settings → Extensions (Finder Extensions), relaunch Finder, right-click a project folder);
+- **Phase:** 4 — launch.
+- **Done this session:** (1) **D-015** — `ToolLocator`: every external tool (all package managers
+  + `code`) resolves from a hardcoded ordered search of known install locations (nvm
+  newest-node-first, volta, bun, cargo, asdf shims, `~/.local/bin`, `~/go/bin`, Homebrew,
+  `/usr/local…`, system); missing tool = exit 127 with the searched list and the queue stops; no
+  configuration, no fallbacks. Open is hardcoded `code .` (D-006 superseded, editor setting
+  deleted). (2) **D-016** — Finder "Dormant ▸" hover submenu rebuilt with an explicit root item
+  (Finder inserts menu items flat and ignores `NSMenu` titles). (3) **D-017** — directories are
+  first-class: registry schema v2 (`directories` table, v1 upgrades in place);
+  `Scanner.importDirectory` (import = upsert directory + scan); Finder menus scoped by click
+  kind — folder items get Clean/Archive/Restore/Import Folder in Dormant, **empty space** gets
+  **Open Directory in Dormant** (imports the folder, opens the app with it selected); the main
+  window groups projects under their deepest containing directory (`DirectoryGrouping`) and
+  shows each directory's **whole-folder on-disk size**.
+- **Verified:** `Scripts/check.sh` end to end — lint clean (pre-existing Dialogs.swift warnings
+  only), generate + build OK, **104 tests / 14 suites pass** (14 new across ToolLocator,
+  InstallCommands, Registry v2/migration, Scanner import, DirectoryGrouping, URL slugs), site
+  builds (8 assets copied). Finder menus and the grouped list await the human's hands-on pass;
+  app + Finder extension restarted from the fresh Debug build for that.
+- **Landing:** all of the above is **uncommitted in the working tree on `feature/icon-cocoon`**,
+  which also still holds the unlanded D-014 icon commit (`f03a82d`). Needs a landing decision:
+  one PR carrying both, or split onto a branch off `dev` — then feature branch → PR → `dev`
+  (D-007).
+- **Blocked by:** (1) the human's Finder round trip: folder right-click → 4-item "Dormant ▸"
+  (Clean, Archive, Restore, Import Folder in Dormant); empty-space right-click → Open Directory
+  in Dormant → app opens with the directory selected and its whole-folder size shown;
   (2) human-only GitHub settings for D-007: the `release:patch` / `release:minor` /
   `release:major` labels and `dev` as default branch with required-PR protection.
-- **Next action (new session):** take the Finder round-trip confirmation, then the release PR from
-  `dev` to `main` with one `release:*` label (ship-release skill) → tap publish procedure → manual
-  site deploy when the human asks. When the first release ships, flip the site from "coming soon"
-  to real download links and enable the brew command copy.
+- **Next action (new session):** settle how to land this work and the icon commit, open the PR(s)
+  to `dev`, then take the Finder round-trip confirmation and the release PR from `dev` to `main`
+  with one `release:*` label (ship-release skill) → tap publish procedure → manual site deploy
+  when the human asks. When the first release ships, flip the site from "coming soon" to real
+  download links and enable the brew command copy.
 
 ---
 
