@@ -35,6 +35,8 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
       startImport(fileURL)
     case .openDirectory:
       startOpenDirectory(fileURL)
+    case .gitClone:
+      startGitClone(fileURL)
     case .projectInfo:
       startProjectInfo(fileURL)
     case .openRepository:
@@ -251,6 +253,37 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
         }
       } catch {
         showAlert(title: "Open Directory failed", message: "\(error)")
+      }
+    }
+  }
+
+  private func startGitClone(_ folder: URL) {
+    showDialog(title: "Git Clone") {
+      GitCloneDialog(
+        folder: folder,
+        onConfirm: { remote in
+          self.closeDialog()
+          self.runGitClone(remote: remote, into: folder)
+        },
+        onCancel: { self.closeDialog() }
+      )
+    }
+  }
+
+  private func runGitClone(remote: String, into folder: URL) {
+    Task {
+      do {
+        let destination = try await Task.detached { () -> URL in
+          let destination = try CloneEngine().clone(remote: remote, into: folder)
+          if let registry = try? Registry(path: DormantPaths().registry) {
+            _ = try? Scanner(registry: registry).register(projectAt: destination)
+          }
+          return destination
+        }.value
+        NotificationCenter.default.post(name: .dormantDataChanged, object: nil)
+        open(destination)
+      } catch {
+        showAlert(title: "Clone failed", message: "\(error)")
       }
     }
   }

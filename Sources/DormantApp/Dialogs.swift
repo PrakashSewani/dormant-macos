@@ -6,6 +6,7 @@ struct DialogScaffold<Content: View>: View {
   let title: String
   let icon: String
   let okTitle: String
+  var okEnabled: Bool = true
   let onConfirm: () -> Void
   let onCancel: () -> Void
   @ViewBuilder let content: Content
@@ -27,6 +28,7 @@ struct DialogScaffold<Content: View>: View {
           .keyboardShortcut(.defaultAction)
           .buttonStyle(.borderedProminent)
           .dialogButton()
+          .disabled(!okEnabled)
       }
     }
     .padding(UIConstants.dialogPadding)
@@ -167,6 +169,55 @@ struct RestoreDialog: View {
       onConfirm(URL(fileURLWithPath: customPath))
     } else {
       onConfirm(nil)
+    }
+  }
+}
+
+struct GitCloneDialog: View {
+  let folder: URL
+  let onConfirm: (String) -> Void
+  let onCancel: () -> Void
+
+  @State private var remoteText = ""
+
+  private var remote: String? {
+    CloneEngine.normalizedRemote(remoteText)
+  }
+
+  private var previewName: String? {
+    remote.flatMap { CloneEngine.folderName(fromRemote: $0) }
+  }
+
+  var body: some View {
+    DialogScaffold(
+      title: "Git Clone into \(folder.lastPathComponent)",
+      icon: "arrow.down.circle",
+      okTitle: "Clone",
+      okEnabled: remote != nil && previewName != nil,
+      onConfirm: confirmSelection,
+      onCancel: onCancel
+    ) {
+      VStack(alignment: .leading, spacing: 8) {
+        Text("Repository URL")
+        TextField("https://github.com/user/repo.git", text: $remoteText)
+          .textFieldStyle(.roundedBorder)
+        if let previewName {
+          Text("Clones into \(folder.path)/\(previewName), then opens in VS Code.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+        } else {
+          Text("Enter an https, ssh, or git@ repository URL.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+      }
+    }
+  }
+
+  private func confirmSelection() {
+    if let remote {
+      onConfirm(remote)
     }
   }
 }

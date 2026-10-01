@@ -7,4 +7,5 @@ public enum DormantError: Error, Equatable, Sendable {
   case verificationFailed(details: String)
   case registryFailure
   case installCommandFailed(cmd: String, status: Int32, stderr: String)
+  case cloneFailed(stderr: String)
 }
