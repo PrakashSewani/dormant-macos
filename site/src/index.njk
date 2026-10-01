@@ -14,12 +14,14 @@ description: Dormant separates the source you wrote from the gigabytes your tool
     <span class="button button-primary button-soon">Coming soon for macOS</span>
     <a class="button button-secondary" href="#moves">See how it works</a>
   </div>
-  <p class="requirements">macOS 14 or later · Menu bar app with a Finder extension · No account, no network</p>
+  <p class="requirements">macOS 26 or later · Menu bar app with a Finder extension · No account, no network</p>
   <div class="install-block">
     <pre class="install-line"><code>brew tap PrakashSewani/tap &amp;&amp; brew install --cask dormant</code></pre>
     <button class="copy-button" type="button" disabled>Copy</button>
   </div>
-  <p class="requirements">Not published yet — this install goes live with the first release.</p>
+  <p class="requirements">Not published yet — the DMG download and this install go live with the
+    first release. Brew installs from the DMG into /Applications; downloading it directly shows
+    the drag-into-Applications window.</p>
   <p class="requirements">First launch: System Settings → Privacy &amp; Security → "Open Anyway" (Dormant is ad-hoc signed).</p>
 </section>
 
@@ -128,7 +130,14 @@ Nothing runs until you confirm.</code></pre>
     regenerable, git status, branch, remote), <strong>Open</strong> in VS Code, and
     <strong>Open Repository</strong> in the browser. From Finder, a <strong>Dormant ▸</strong>
     right-click menu: Clean, Archive, Restore and Import Folder in Dormant on a folder; Open
-    Directory in Dormant on empty space.</p>
+    Directory in Dormant on empty space — and <strong>Git Clone into Folder in Dormant</strong>:
+    paste a repository URL and the clone lands in that folder, registered and open in VS Code.</p>
+  <p class="also">In the main window: <strong>search</strong> across projects and paths,
+    <strong>Stale</strong> badges for anything without a commit in 30 days, a live savings summary
+    with one-click <strong>Clean All…</strong> (previewed per project first), and a quiet note when
+    a project sits idle past 30 days — Dormant suggests archiving and never does it on its own.
+    The menu bar lists your projects for one-click <strong>Open</strong> and
+    <strong>Restore</strong>.</p>
 </section>
 
 <section class="directories" id="directories" aria-labelledby="directories-title">
@@ -157,7 +166,7 @@ Nothing runs until you confirm.</code></pre>
   <div class="restore-proof">
     <p class="restore-label">Right-click in Finder</p>
     <pre><code>on a folder      Dormant ▸  Clean · Archive · Restore · Import Folder in Dormant
-on empty space   Dormant ▸  Open Directory in Dormant</code></pre>
+on empty space   Dormant ▸  Open Directory in Dormant · Git Clone into Folder in Dormant</code></pre>
   </div>
 </section>
 
@@ -181,5 +190,5 @@ on empty space   Dormant ▸  Open Directory in Dormant</code></pre>
     <span class="button button-primary button-soon">Coming soon for macOS</span>
   </div>
   <p class="requirements">Not published yet — the first release is on its way.</p>
-  <p class="requirements">macOS 14 or later · Free · Your projects stay on your Mac</p>
+  <p class="requirements">macOS 26 or later · Free · Your projects stay on your Mac</p>
 </section>

@@ -37,12 +37,12 @@ Release (cut only when the human asks):
    `release:minor`, or `release:major`.
 3. On merge, the release workflow (`.github/workflows/release.yml`) applies the labeled bump to
    `MARKETING_VERSION`, updates `CHANGELOG.md`, commits on `main`, creates the `v<version>` tag,
-   and publishes the GitHub release with the `Dormant-v<version>.zip` artifact. The zip is the
-   Release build — `xcodebuild -project Dormant.xcodeproj -scheme Dormant -configuration Release
-   -destination 'platform=macOS' -derivedDataPath build build` then
-   `cd build/Build/Products/Release && zip -r "Dormant-v<version>.zip" Dormant.app` (both verified
-   locally 2026-09-26).
-4. Verify: `gh run watch`, the release page, and a launch smoke of the downloaded zip.
+   and publishes the GitHub release with the `Dormant-v<version>.dmg` artifact (D-019). The DMG is
+   the Release build (`xcodebuild -project Dormant.xcodeproj -scheme Dormant -configuration Release
+   -destination 'platform=macOS' -derivedDataPath build build`) packaged by
+   `Scripts/make-dmg.sh` (`create-dmg`, drag-to-Applications layout) into `build/`.
+4. Verify: `gh run watch`, the release page, and a launch smoke of the downloaded DMG (mount,
+   drag or `brew install --cask`, launch).
 5. Promo site deploy (manual, only when the human asks): the site builds to `site/_site/`
    (`npm ci --include=dev && npm run build` in `site/`, D-009). Host: the GitHub Pages project
    site (`https://prakashsewani.github.io/dormant-macos/`), served from the `gh-pages` branch
@@ -50,8 +50,8 @@ Release (cut only when the human asks):
    `git subtree push --prefix site/_site origin gh-pages`.
 6. Publish to the Homebrew tap (D-010; after the release is verified):
 
-   1. `gh release download v<version> -p "Dormant-v<version>.zip" --dir /tmp/dormant-release`
-   2. `shasum -a 256 /tmp/dormant-release/Dormant-v<version>.zip`
+   1. `gh release download v<version> -p "Dormant-v<version>.dmg" --dir /tmp/dormant-release`
+   2. `shasum -a 256 /tmp/dormant-release/Dormant-v<version>.dmg`
    3. In [`PrakashSewani/homebrew-tap`](https://github.com/PrakashSewani/homebrew-tap): set
       `version "<version>"` and `sha256 "<the shasum>"` in `Casks/dormant.rb` (first release:
       create the file from the template below), commit `dormant <version>`, push to `main`.
@@ -68,12 +68,12 @@ cask "dormant" do
   version "<version>"
   sha256 "<sha256>"
 
-  url "https://github.com/PrakashSewani/dormant-macos/releases/download/v#{version}/Dormant-v#{version}.zip"
+  url "https://github.com/PrakashSewani/dormant-macos/releases/download/v#{version}/Dormant-v#{version}.dmg"
   name "Dormant"
   desc "Put idle macOS project workspaces to sleep: clean, archive and restore them safely"
   homepage "https://prakashsewani.github.io/dormant-macos/"
 
-  depends_on macos: ">= :sonoma"
+  depends_on macos: ">= :tahoe"
 
   app "Dormant.app"
 
