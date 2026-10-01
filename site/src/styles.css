@@ -198,18 +198,6 @@ a:hover {
   overflow-x: auto;
 }
 
-.button-soon {
-  background: var(--line);
-  color: var(--ink-muted);
-  cursor: default;
-}
-
-.button-soon:hover {
-  background: var(--line);
-  color: var(--ink-muted);
-  transform: none;
-}
-
 .install-block {
   display: flex;
   align-items: center;
