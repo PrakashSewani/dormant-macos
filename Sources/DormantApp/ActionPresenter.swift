@@ -309,6 +309,20 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
     }
   }
 
+  func reviewIdleCandidates(_ candidates: [ProjectRecord]) {
+    guard !candidates.isEmpty else { return }
+    showDialog(title: "Idle Projects") {
+      IdleReviewDialog(
+        candidates: candidates,
+        onArchive: { record in
+          self.closeDialog()
+          self.present(action: .archive, fileURL: URL(fileURLWithPath: record.path))
+        },
+        onClose: { self.closeDialog() }
+      )
+    }
+  }
+
   private func startGitClone(_ folder: URL) {
     showDialog(title: "Git Clone") {
       GitCloneDialog(

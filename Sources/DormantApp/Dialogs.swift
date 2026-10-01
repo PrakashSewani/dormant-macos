@@ -261,6 +261,58 @@ struct CleanAllDialog: View {
   }
 }
 
+struct IdleReviewDialog: View {
+  let candidates: [ProjectRecord]
+  let onArchive: (ProjectRecord) -> Void
+  let onClose: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: UIConstants.dialogSpacing) {
+      Label("Idle projects", systemImage: "moon.zzz")
+        .font(.headline)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .glassEffect(.regular, in: .capsule)
+      Text(
+        "No commit in over \(Staleness.staleAfterDays) days. Nothing is archived "
+          + "automatically — Archive runs the standard, reviewed flow per project."
+      )
+      .font(.caption)
+      .foregroundStyle(.secondary)
+      .fixedSize(horizontal: false, vertical: true)
+      ScrollView {
+        VStack(alignment: .leading, spacing: 6) {
+          ForEach(candidates) { record in
+            HStack(spacing: UIConstants.buttonSpacing) {
+              VStack(alignment: .leading, spacing: 2) {
+                Text(record.name)
+                Text(record.path)
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+              }
+              Spacer()
+              Button("Archive…", systemImage: "archivebox.fill") {
+                onArchive(record)
+              }
+              .dialogButton()
+            }
+          }
+        }
+      }
+      .frame(maxHeight: 260)
+      HStack(spacing: UIConstants.buttonSpacing) {
+        Spacer()
+        Button("Close", action: onClose)
+          .keyboardShortcut(.defaultAction)
+          .buttonStyle(.borderedProminent)
+          .dialogButton()
+      }
+    }
+    .padding(UIConstants.dialogPadding)
+    .frame(minWidth: UIConstants.dialogMinWidth)
+  }
+}
+
 @MainActor
 final class InstallRunModel: ObservableObject {
   @Published var log = ""

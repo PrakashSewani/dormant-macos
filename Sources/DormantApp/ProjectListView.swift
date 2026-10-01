@@ -23,6 +23,7 @@ final class ProjectListModel: ObservableObject {
   @Published private(set) var sizeTexts: [String: String] = [:]
   @Published private(set) var staleIDs: Set<String> = []
   @Published private(set) var savings: SavingsReport?
+  @Published private(set) var idleCandidates: [ProjectRecord] = []
 
   func refresh() {
     var projectRows: [ProjectRecord] = []
@@ -142,8 +143,11 @@ final class ProjectListModel: ObservableObject {
   private func computeSavings() {
     let records = projects
     Task {
-      let report = await Task.detached { Savings.report(for: records) }.value
-      savings = report
+      let result = await Task.detached { () -> (SavingsReport, [ProjectRecord]) in
+        (Savings.report(for: records), IdleSuggestions.candidates(in: records))
+      }.value
+      savings = result.0
+      idleCandidates = result.1
     }
   }
 }
@@ -194,6 +198,24 @@ struct ProjectListView: View {
         .padding(.vertical, 8)
         .glassEffect(.regular, in: .rect(cornerRadius: 12))
         .padding(12)
+      }
+      if !model.idleCandidates.isEmpty {
+        HStack(spacing: UIConstants.buttonSpacing) {
+          Label(
+            "\(model.idleCandidates.count) projects idle for over "
+              + "\(Staleness.staleAfterDays) days",
+            systemImage: "moon.zzz"
+          )
+          .font(.callout)
+          .foregroundStyle(.secondary)
+          Spacer()
+          Button("Review…", systemImage: "archivebox") {
+            ActionPresenter.shared.reviewIdleCandidates(model.idleCandidates)
+          }
+          .frame(minWidth: UIConstants.toolbarButtonMinWidth)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
       }
       if model.rows.isEmpty {
         VStack(spacing: 12) {
