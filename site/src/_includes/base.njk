@@ -32,4 +32,17 @@
       <p class="footer-fine">macOS 26 or later. Free.</p>
     </footer>
   </body>
+  <script>
+    document.querySelectorAll(".install-block").forEach(function (block) {
+      var button = block.querySelector(".copy-button");
+      var code = block.querySelector("code");
+      if (!button || !code) return;
+      button.addEventListener("click", function () {
+        navigator.clipboard.writeText(code.textContent.trim()).then(function () {
+          button.textContent = "Copied";
+          setTimeout(function () { button.textContent = "Copy"; }, 1500);
+        });
+      });
+    });
+  </script>
 </html>

@@ -47,9 +47,9 @@ Release (cut only when the human asks):
    `dormant-macos`, <https://dormant.prakashsewani.com>) builds `site/` and deploys on every
    merge into `dev`. No manual publish; never hand-deploy over the Git-connected service. The
    PR check "Workers Builds: dormant-macos" fails on pull requests (preview builds) and is
-   harmless — production builds from `dev` succeed. After the first release ships, flip the
-   site copy from "coming soon" to real download links and enable the brew command copy
-   (an ordinary commit on `dev`).
+   harmless — production builds from `dev` succeed. The site's download buttons link to the
+   versioned DMG (`releases/download/v<version>/Dormant-v<version>.dmg`), so bump the URLs in
+   `site/src/index.njk` on `dev` with every release.
 6. Publish to the Homebrew tap (D-010; after the release is verified):
 
    1. `gh release download v<version> -p "Dormant-v<version>.dmg" --dir /tmp/dormant-release`
@@ -75,7 +75,7 @@ cask "dormant" do
   desc "Put idle macOS project workspaces to sleep: clean, archive and restore them safely"
   homepage "https://dormant.prakashsewani.com"
 
-  depends_on macos: ">= :tahoe"
+  depends_on macos: :tahoe
 
   app "Dormant.app"
 
