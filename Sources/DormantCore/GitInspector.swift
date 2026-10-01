@@ -7,6 +7,7 @@ public struct GitStatus: Sendable, Equatable {
   public let isDirty: Bool
   public let modifiedCount: Int
   public let untrackedCount: Int
+  public let committerDate: Date?
 }
 
 public enum GitState: Sendable, Equatable {
@@ -60,6 +61,14 @@ public struct GitInspector {
     let headResult = try git(["rev-parse", "HEAD"])
     let head = headResult.exitCode == 0 ? trimmed(headResult.stdout) : nil
 
+    let dateResult = try git(["log", "-1", "--format=%ct"])
+    var committerDate: Date?
+    if dateResult.exitCode == 0, let raw = trimmed(dateResult.stdout),
+      let epoch = TimeInterval(raw)
+    {
+      committerDate = Date(timeIntervalSince1970: epoch)
+    }
+
     let branchResult = try git(["rev-parse", "--abbrev-ref", "HEAD"])
     let branch = branchResult.exitCode == 0 ? trimmed(branchResult.stdout) : nil
 
@@ -81,7 +90,8 @@ public struct GitInspector {
         remote: remote,
         isDirty: modifiedCount + untrackedCount > 0,
         modifiedCount: modifiedCount,
-        untrackedCount: untrackedCount))
+        untrackedCount: untrackedCount,
+        committerDate: committerDate))
   }
 
   private func trimmed(_ output: String) -> String? {

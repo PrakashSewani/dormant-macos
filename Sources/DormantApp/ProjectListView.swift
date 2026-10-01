@@ -21,6 +21,7 @@ final class ProjectListModel: ObservableObject {
   @Published private(set) var rows: [ProjectRow] = []
   @Published private(set) var projects: [ProjectRecord] = []
   @Published private(set) var sizeTexts: [String: String] = [:]
+  @Published private(set) var staleIDs: Set<String> = []
 
   func refresh() {
     var projectRows: [ProjectRecord] = []
@@ -100,8 +101,9 @@ final class ProjectListModel: ObservableObject {
   private func computeSizes() {
     let pending = Self.flatten(rows)
     Task {
-      let computed = await Task.detached { () -> [String: String] in
-        var result: [String: String] = [:]
+      let computed = await Task.detached { () -> (sizes: [String: String], staleIDs: Set<String>) in
+        var sizes: [String: String] = [:]
+        var staleIDs: Set<String> = []
         var registry: Registry?
         do {
           registry = try Registry(path: DormantPaths().registry)
@@ -112,15 +114,22 @@ final class ProjectListModel: ObservableObject {
           let url = URL(fileURLWithPath: row.path)
           if let record = row.record, record.state == .dormant {
             if let archive = try? registry?.archive(projectID: record.id) {
-              result[row.id] = Bytes.format(archive.size)
+              sizes[row.id] = Bytes.format(archive.size)
             }
           } else {
-            result[row.id] = Bytes.format(SizeAccounting.totalBytes(at: url))
+            sizes[row.id] = Bytes.format(SizeAccounting.totalBytes(at: url))
+            if let record = row.record,
+              case .repository(let status) = GitInspector().check(root: url),
+              Staleness.isStale(lastCommit: status.committerDate)
+            {
+              staleIDs.insert(record.id)
+            }
           }
         }
-        return result
+        return (sizes, staleIDs)
       }.value
-      sizeTexts = computed
+      sizeTexts = computed.sizes
+      staleIDs = computed.staleIDs
     }
   }
 
@@ -132,7 +141,28 @@ final class ProjectListModel: ObservableObject {
 struct ProjectListView: View {
   @StateObject private var model = ProjectListModel()
   @State private var selection: Set<String> = []
+  @State private var searchText = ""
   @Environment(\.openWindow) private var openWindow
+
+  private var filteredRows: [ProjectRow] {
+    let query = searchText.trimmingCharacters(in: .whitespaces)
+    guard !query.isEmpty else { return model.rows }
+    return model.rows.compactMap { row in
+      if row.title.localizedCaseInsensitiveContains(query)
+        || row.path.localizedCaseInsensitiveContains(query)
+      {
+        return row
+      }
+      guard let children = row.children else { return nil }
+      let matching = children.filter {
+        $0.title.localizedCaseInsensitiveContains(query)
+          || $0.path.localizedCaseInsensitiveContains(query)
+      }
+      guard !matching.isEmpty else { return nil }
+      return ProjectRow(
+        id: row.id, title: row.title, path: row.path, record: row.record, children: matching)
+    }
+  }
 
   var body: some View {
     VStack(spacing: 0) {
@@ -147,13 +177,13 @@ struct ProjectListView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else {
-        Table(model.rows, children: \.children, selection: $selection) {
+        Table(filteredRows, children: \.children, selection: $selection) {
           TableColumn("Name") { row in
             HStack(spacing: 6) {
               if let record = row.record {
                 Image(systemName: ecosystemSymbol(record.ecosystem))
                   .foregroundStyle(.secondary)
-                StateBadge(record: record)
+                StateBadge(record: record, isStale: model.staleIDs.contains(record.id))
                 Text(record.name)
               } else {
                 Image(systemName: "folder.fill")
@@ -203,6 +233,7 @@ struct ProjectListView: View {
           .frame(minWidth: UIConstants.toolbarButtonMinWidth)
       }
     }
+    .searchable(text: $searchText, prompt: "Search projects")
     .onAppear {
       ActionPresenter.shared.openMain = { path in
         openWindow(id: "main")
@@ -259,6 +290,7 @@ struct ProjectListView: View {
 
 struct StateBadge: View {
   let record: ProjectRecord
+  var isStale: Bool = false
 
   var body: some View {
     let (text, color) = badge
@@ -273,6 +305,7 @@ struct StateBadge: View {
   private var badge: (String, Color) {
     if record.state == .dormant { return ("Dormant", .orange) }
     if !FileManager.default.fileExists(atPath: record.path) { return ("Missing", .red) }
+    if isStale { return ("Stale", .gray) }
     return ("Active", .green)
   }
 }
