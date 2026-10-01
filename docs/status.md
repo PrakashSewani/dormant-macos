@@ -15,33 +15,23 @@ rule 4. Keep exactly one phase `in progress`.
 
 ## Current handoff
 
-- **Phase:** 4 — launch; the pre-release UI/distribution batch is complete on
-  `feature/ui-glass-batch` (PR → `dev`).
-- **Done this session:** (0) PR #7 + D-014 merged into `dev`; pulled. (1) **App cleanup**: exactly
-  one `Dormant.app`, the fresh Release build at `/Applications/Dormant.app`; all build-artifact
-  copies deleted (`~/.dormant` untouched). (2) **D-018–D-024 recorded and implemented** on
-  `feature/ui-glass-batch`: Liquid Glass on a macOS 26 floor (target 26.0, UIConstants button min
-  sizing, SF Symbols everywhere, brand-mark menu-bar icon `Mark.imageset`), **Git Clone into
-  Folder** (D-020), **search + Stale badges** (D-021), **savings summary + Clean All…** (D-022),
-  **auto-archive suggestions** (D-023), **menu-bar quick actions** (D-024), **DMG distribution**
-  (D-019: `Scripts/make-dmg.sh`, release.yml ships `Dormant-v<version>.dmg`, cask template →
-  `.dmg` + `>= :tahoe`). Site copy and CHANGELOG cover the batch. (3) **D-025** — site hosting
-  reconciled with reality: Cloudflare Workers Builds auto-deploys the site from `dev` at
-  <https://dormant.prakashsewani.com>; the GitHub Pages plan is dropped.
-- **Verified:** `Scripts/check.sh` end to end — lint clean, generate + build OK, **123 tests / 18
-  suites pass** (19 new: CloneEngine, Staleness, Savings, IdleSuggestions), site builds (8 assets).
-  DMG smoke: Release build → `Scripts/make-dmg.sh` → `build/Dormant-v0.1.0.dmg` with the
-  drag-to-Applications window (create-dmg 1.3.0). Fresh Release app relaunched from
-  `/Applications` for the hands-on pass.
-- **Blocked by:** (1) the human's hands-on pass of the new UI/features (Finder: Git Clone round
-  trip; app: glass look, button sizing, icons, search/stale, Clean All, idle banner, menu-bar
-  actions); (2) human-only GitHub settings for D-007: the `release:patch` / `release:minor` /
-  `release:major` labels (default branch is `dev`; PR protection unknown).
-- **Next action (new session):** merge the batch PR after the human's pass — the promo site
-  auto-deploys from the merge into `dev` (D-025) — then the release PR `dev` → `main` with one
-  `release:*` label (ship-release skill — DMG path) → tap publish (`Casks/dormant.rb` first
-  creation from the template) → flip the site from "coming soon" to real download links and
-  enable the brew command copy.
+- **Phase:** 4 — launch; cutting the first release **v0.1.0**.
+- **Done this session:** (0) Release labels `release:patch` / `release:minor` / `release:major`
+  created on GitHub (D-007 unblocked). (1) Prep PR #9: `MARKETING_VERSION` 0.1.0 → 0.0.9 so the
+  labeled bump lands the first release exactly on 0.1.0. (2) Release PR #10 merged with
+  `release:patch` — by the bump arithmetic that cut **v0.0.10** (patch increments the last
+  segment), wrong per the human's explicit v0.1.0 decision. Yanked on the spot: release and tag
+  deleted, the `Release v0.0.10` commit reverted on `main` (PR #11, no release label = no
+  publish). Nothing consumed v0.0.10 (tap and site were still untouched). (3) This update rides
+  the redo: release PR `dev` → `main` with `release:minor` (0.0.9 → **0.1.0**).
+- **Verified:** CI `check` green on PRs #9, #10, #11. The release workflow ran end to end on the
+  v0.0.10 attempt (bump → changelog → tag → Release build + DMG → GitHub release, 1m55s) — the
+  pipeline itself is proven.
+- **Blocked by:** nothing.
+- **Next action:** merge the `release:minor` release PR (v0.1.0) → publish `Casks/dormant.rb` to
+  `PrakashSewani/homebrew-tap` (ship-release skill step 6) → flip the site copy from "coming
+  soon" to the real download link + enable the brew command copy (branch/PR into `dev`,
+  auto-deploys) → final status.md + `brew install --cask` smoke.
 
 ---
 
