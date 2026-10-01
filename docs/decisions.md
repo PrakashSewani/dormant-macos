@@ -679,3 +679,39 @@ archives on its own (safety rules 5–6).
 **Decision:** The menu-bar extra lists up to 10 registry projects with one-click **Open**, and
 **Restore…** for dormant ones, above the existing "Open Dormant" / "Quit". The list refreshes when
 the menu opens. Actions route through `ActionPresenter` like every other surface.
+
+## D-025: Site hosting — Cloudflare Workers Builds, auto-deploy from `dev`
+
+**Date:** 2026-10-01
+
+**Context:** The docs planned the GitHub Pages project site
+(`prakashsewani.github.io/dormant-macos/`, `gh-pages` branch via `git subtree push`) deployed
+manually. Reality: the site is served by the Cloudflare Worker `dormant-macos` at
+**<https://dormant.prakashsewani.com>**, Git-connected through Cloudflare **Workers Builds**,
+which deploys automatically on merges into `dev`. GitHub Pages was never enabled (the URL is a
+404 and no `gh-pages` branch exists). The human confirmed the mechanism 2026-10-01 ("when i
+merge into dev it will deploy auto deploy") and instructed: do not hand-deploy over the
+Cloudflare setup.
+
+**Decision:**
+
+- The promo site's host is **<https://dormant.prakashsewani.com>** (Cloudflare Worker
+  `dormant-macos`).
+- **Deploy path: merge into `dev`** — Workers Builds builds `site/` and deploys automatically.
+  Manual deploys (wrangler, subtree) are not used and must not overwrite the Git-connected
+  service. Product/store releases stay manual (D-010).
+- The PR check "Workers Builds: dormant-macos" fails on pull requests (preview builds) while
+  production builds from `dev` succeed — the live site carried `dev`'s current copy (PR #7's
+  sections) as evidence. The failing preview check is cosmetic.
+- The cask `homepage` and all docs point at `dormant.prakashsewani.com`. Supersedes the GitHub
+  Pages plan recorded in `ship-release` and D-009's "no host chosen yet".
+
+**Considered and rejected:**
+
+- **Manual `wrangler deploy` of `site/_site`** — the human rejected it; it would fight the
+  Git-connected deployment pipeline.
+- **GitHub Pages per the old plan** — never enabled; the Cloudflare host is live and working.
+
+**Cost / risk:** a broken build on `dev` leaves the site on its previous copy (fails safe); the
+cosmetic preview-check noise stays until the human disconnects or reconfigures preview builds in
+the Cloudflare dashboard (human-only).

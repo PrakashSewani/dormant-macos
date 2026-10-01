@@ -43,11 +43,13 @@ Release (cut only when the human asks):
    `Scripts/make-dmg.sh` (`create-dmg`, drag-to-Applications layout) into `build/`.
 4. Verify: `gh run watch`, the release page, and a launch smoke of the downloaded DMG (mount,
    drag or `brew install --cask`, launch).
-5. Promo site deploy (manual, only when the human asks): the site builds to `site/_site/`
-   (`npm ci --include=dev && npm run build` in `site/`, D-009). Host: the GitHub Pages project
-   site (`https://prakashsewani.github.io/dormant-macos/`), served from the `gh-pages` branch
-   (one-time human setting: Pages → Deploy from branch → `gh-pages` / root). Publish:
-   `git subtree push --prefix site/_site origin gh-pages`.
+5. Promo site: **auto-deploys from `dev`** (D-025) — Cloudflare Workers Builds (service
+   `dormant-macos`, <https://dormant.prakashsewani.com>) builds `site/` and deploys on every
+   merge into `dev`. No manual publish; never hand-deploy over the Git-connected service. The
+   PR check "Workers Builds: dormant-macos" fails on pull requests (preview builds) and is
+   harmless — production builds from `dev` succeed. After the first release ships, flip the
+   site copy from "coming soon" to real download links and enable the brew command copy
+   (an ordinary commit on `dev`).
 6. Publish to the Homebrew tap (D-010; after the release is verified):
 
    1. `gh release download v<version> -p "Dormant-v<version>.dmg" --dir /tmp/dormant-release`
@@ -71,7 +73,7 @@ cask "dormant" do
   url "https://github.com/PrakashSewani/dormant-macos/releases/download/v#{version}/Dormant-v#{version}.dmg"
   name "Dormant"
   desc "Put idle macOS project workspaces to sleep: clean, archive and restore them safely"
-  homepage "https://prakashsewani.github.io/dormant-macos/"
+  homepage "https://dormant.prakashsewani.com"
 
   depends_on macos: ">= :tahoe"
 

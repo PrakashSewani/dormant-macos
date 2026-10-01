@@ -50,7 +50,8 @@ Create release PRs from `dev` to `main` and apply exactly one release label:
 `release:patch`, `release:minor`, or `release:major`. After merge, release automation runs only
 from `main`, updates `MARKETING_VERSION` in `project.yml` and `CHANGELOG.md`, creates a matching
 `v<version>` tag, and publishes a GitHub release. Merges without a release label do not publish a
-release (`docs/decisions.md` D-007). Product and site deployments remain manual; see
+release (`docs/decisions.md` D-007). Product deploys stay manual; the promo site auto-deploys
+from merges into `dev` via Cloudflare Workers Builds (D-025); see
 [`.commandcode/skills/ship-release/SKILL.md`](../.commandcode/skills/ship-release/SKILL.md) for
 the project-specific procedure.
 

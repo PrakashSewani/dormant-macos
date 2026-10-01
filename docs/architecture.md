@@ -283,7 +283,8 @@ without publishing).
   `CHANGELOG.md`, creates the matching `v<version>` tag, and publishes a GitHub release with the
   `Dormant-v<version>.dmg` artifact (D-019). Without a release label, no release is published.
 - `dev` represents ongoing unreleased work and can match `main` just after a release. Deployment
-  of the product or promo site remains a deliberate manual action.
+  of the product remains a deliberate manual action; the promo site auto-deploys from `dev` via
+  Cloudflare Workers Builds (D-025).
 - Required GitHub repository settings (human-only): default branch `dev`, required-PR
   protections for `dev` and `main`, and the three `release:*` labels.
 

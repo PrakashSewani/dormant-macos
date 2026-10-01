@@ -25,7 +25,9 @@ rule 4. Keep exactly one phase `in progress`.
   Folder** (D-020), **search + Stale badges** (D-021), **savings summary + Clean All…** (D-022),
   **auto-archive suggestions** (D-023), **menu-bar quick actions** (D-024), **DMG distribution**
   (D-019: `Scripts/make-dmg.sh`, release.yml ships `Dormant-v<version>.dmg`, cask template →
-  `.dmg` + `>= :tahoe`). Site copy and CHANGELOG cover the batch.
+  `.dmg` + `>= :tahoe`). Site copy and CHANGELOG cover the batch. (3) **D-025** — site hosting
+  reconciled with reality: Cloudflare Workers Builds auto-deploys the site from `dev` at
+  <https://dormant.prakashsewani.com>; the GitHub Pages plan is dropped.
 - **Verified:** `Scripts/check.sh` end to end — lint clean, generate + build OK, **123 tests / 18
   suites pass** (19 new: CloneEngine, Staleness, Savings, IdleSuggestions), site builds (8 assets).
   DMG smoke: Release build → `Scripts/make-dmg.sh` → `build/Dormant-v0.1.0.dmg` with the
@@ -35,10 +37,11 @@ rule 4. Keep exactly one phase `in progress`.
   trip; app: glass look, button sizing, icons, search/stale, Clean All, idle banner, menu-bar
   actions); (2) human-only GitHub settings for D-007: the `release:patch` / `release:minor` /
   `release:major` labels (default branch is `dev`; PR protection unknown).
-- **Next action (new session):** merge the batch PR after the human's pass, then the release PR
-  `dev` → `main` with one `release:*` label (ship-release skill — DMG path) → tap publish
-  (`Casks/dormant.rb` first creation from the template) → manual site deploy when the human asks
-  → flip the site from "coming soon" to real download links and enable the brew command copy.
+- **Next action (new session):** merge the batch PR after the human's pass — the promo site
+  auto-deploys from the merge into `dev` (D-025) — then the release PR `dev` → `main` with one
+  `release:*` label (ship-release skill — DMG path) → tap publish (`Casks/dormant.rb` first
+  creation from the template) → flip the site from "coming soon" to real download links and
+  enable the brew command copy.
 
 ---
 
