@@ -91,15 +91,14 @@ jobs:
           git tag "v$version"
           git push origin main "v$version"
 
-      - run: brew install xcodegen
+      - run: brew install xcodegen create-dmg
         if: steps.label.outputs.bump != 'none'
       - run: xcodegen generate
         if: steps.label.outputs.bump != 'none'
       - run: xcodebuild -project Dormant.xcodeproj -scheme Dormant -configuration Release -destination 'platform=macOS' -derivedDataPath build build
         if: steps.label.outputs.bump != 'none'
-      - run: zip -r "Dormant-v${{ steps.version.outputs.version }}.zip" Dormant.app
+      - run: Scripts/make-dmg.sh
         if: steps.label.outputs.bump != 'none'
-        working-directory: build/Build/Products/Release
 
       - name: Publish GitHub release
         if: steps.label.outputs.bump != 'none'
@@ -109,6 +108,6 @@ jobs:
           set -euo pipefail
           version="${{ steps.version.outputs.version }}"
           gh release create "v$version" \
-            "build/Build/Products/Release/Dormant-v$version.zip" \
+            "build/Dormant-v$version.dmg" \
             --title "Dormant v$version" \
             --notes-file release-notes.md

@@ -59,7 +59,7 @@ build → test); it must pass before anything is "done".
 
 Release PRs from `dev` to `main` carry exactly one `release:patch`, `release:minor`, or
 `release:major` label; the release workflow bumps the version, tags `v<version>`, and publishes
-the GitHub release. Product and site deployments stay manual. See
+the GitHub release. Product deploys stay manual; the promo site auto-deploys from `dev`. See
 [`docs/development.md`](docs/development.md) and
 [`.commandcode/skills/ship-release/SKILL.md`](.commandcode/skills/ship-release/SKILL.md).
 

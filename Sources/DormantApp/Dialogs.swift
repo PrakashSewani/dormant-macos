@@ -4,27 +4,35 @@ import SwiftUI
 
 struct DialogScaffold<Content: View>: View {
   let title: String
+  let icon: String
   let okTitle: String
+  var okEnabled: Bool = true
   let onConfirm: () -> Void
   let onCancel: () -> Void
   @ViewBuilder let content: Content
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      Text(title).font(.headline)
+    VStack(alignment: .leading, spacing: UIConstants.dialogSpacing) {
+      Label(title, systemImage: icon)
+        .font(.headline)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .glassEffect(.regular, in: .capsule)
       content
-      HStack {
+      HStack(spacing: UIConstants.buttonSpacing) {
         Spacer()
         Button("Cancel", action: onCancel)
           .keyboardShortcut(.cancelAction)
+          .dialogButton()
         Button(okTitle, action: onConfirm)
           .keyboardShortcut(.defaultAction)
-          .controlSize(.large)
           .buttonStyle(.borderedProminent)
+          .dialogButton()
+          .disabled(!okEnabled)
       }
     }
-    .padding(20)
-    .frame(minWidth: 440)
+    .padding(UIConstants.dialogPadding)
+    .frame(minWidth: UIConstants.dialogMinWidth)
   }
 }
 
@@ -36,17 +44,24 @@ struct CleanPreviewDialog: View {
   var body: some View {
     DialogScaffold(
       title: "Reclaim \(Bytes.format(plan.totalReclaim))?",
+      icon: "sparkles",
       okTitle: "Clean",
       onConfirm: onConfirm,
       onCancel: onCancel
     ) {
       VStack(alignment: .leading, spacing: 8) {
-        Text("These regenerable paths will be removed permanently — nothing is archived. Everything else is kept:")
-          .fixedSize(horizontal: false, vertical: true)
-        Text("To make the project work again afterwards, rebuild this state with its own dependency commands (for example cargo build or npm install).")
-          .font(.caption)
-          .foregroundStyle(.secondary)
-          .fixedSize(horizontal: false, vertical: true)
+        Text(
+          "These regenerable paths will be removed permanently — "
+            + "nothing is archived. Everything else is kept:"
+        )
+        .fixedSize(horizontal: false, vertical: true)
+        Text(
+          "To make the project work again afterwards, rebuild this state with its "
+            + "own dependency commands (for example cargo build or npm install)."
+        )
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
         ScrollView {
           VStack(alignment: .leading, spacing: 4) {
             ForEach(plan.items, id: \.relativePath) { item in
@@ -78,6 +93,7 @@ struct ArchiveConfirmDialog: View {
   var body: some View {
     DialogScaffold(
       title: "Archive \(name)?",
+      icon: "archivebox.fill",
       okTitle: "Archive",
       onConfirm: onConfirm,
       onCancel: onCancel
@@ -122,6 +138,7 @@ struct RestoreDialog: View {
   var body: some View {
     DialogScaffold(
       title: "Restore \(record.name)?",
+      icon: "arrow.counterclockwise",
       okTitle: "Restore",
       onConfirm: confirmSelection,
       onCancel: onCancel
@@ -153,6 +170,146 @@ struct RestoreDialog: View {
     } else {
       onConfirm(nil)
     }
+  }
+}
+
+struct GitCloneDialog: View {
+  let folder: URL
+  let onConfirm: (String) -> Void
+  let onCancel: () -> Void
+
+  @State private var remoteText = ""
+
+  private var remote: String? {
+    CloneEngine.normalizedRemote(remoteText)
+  }
+
+  private var previewName: String? {
+    remote.flatMap { CloneEngine.folderName(fromRemote: $0) }
+  }
+
+  var body: some View {
+    DialogScaffold(
+      title: "Git Clone into \(folder.lastPathComponent)",
+      icon: "arrow.down.circle",
+      okTitle: "Clone",
+      okEnabled: remote != nil && previewName != nil,
+      onConfirm: confirmSelection,
+      onCancel: onCancel
+    ) {
+      VStack(alignment: .leading, spacing: 8) {
+        Text("Repository URL")
+        TextField("https://github.com/user/repo.git", text: $remoteText)
+          .textFieldStyle(.roundedBorder)
+        if let previewName {
+          Text("Clones into \(folder.path)/\(previewName), then opens in VS Code.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+        } else {
+          Text("Enter an https, ssh, or git@ repository URL.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+      }
+    }
+  }
+
+  private func confirmSelection() {
+    if let remote {
+      onConfirm(remote)
+    }
+  }
+}
+
+struct CleanAllDialog: View {
+  let report: SavingsReport
+  let onConfirm: () -> Void
+  let onCancel: () -> Void
+
+  var body: some View {
+    DialogScaffold(
+      title: "Reclaim \(Bytes.format(report.totalBytes)) across \(report.entries.count) projects?",
+      icon: "sparkles",
+      okTitle: "Clean All",
+      onConfirm: onConfirm,
+      onCancel: onCancel
+    ) {
+      VStack(alignment: .leading, spacing: 8) {
+        Text(
+          "Regenerable paths will be removed permanently — "
+            + "nothing is archived. Everything else is kept:"
+        )
+        .fixedSize(horizontal: false, vertical: true)
+        ScrollView {
+          VStack(alignment: .leading, spacing: 4) {
+            ForEach(report.entries) { entry in
+              HStack {
+                Text(entry.name)
+                Spacer()
+                Text(Bytes.format(entry.reclaimBytes)).foregroundStyle(.secondary)
+              }
+              .font(.system(.body, design: .monospaced))
+            }
+          }
+        }
+        .frame(maxHeight: 220)
+        Text("Total: \(Bytes.format(report.totalBytes))")
+          .font(.headline)
+      }
+    }
+  }
+}
+
+struct IdleReviewDialog: View {
+  let candidates: [ProjectRecord]
+  let onArchive: (ProjectRecord) -> Void
+  let onClose: () -> Void
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: UIConstants.dialogSpacing) {
+      Label("Idle projects", systemImage: "moon.zzz")
+        .font(.headline)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .glassEffect(.regular, in: .capsule)
+      Text(
+        "No commit in over \(Staleness.staleAfterDays) days. Nothing is archived "
+          + "automatically — Archive runs the standard, reviewed flow per project."
+      )
+      .font(.caption)
+      .foregroundStyle(.secondary)
+      .fixedSize(horizontal: false, vertical: true)
+      ScrollView {
+        VStack(alignment: .leading, spacing: 6) {
+          ForEach(candidates) { record in
+            HStack(spacing: UIConstants.buttonSpacing) {
+              VStack(alignment: .leading, spacing: 2) {
+                Text(record.name)
+                Text(record.path)
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+              }
+              Spacer()
+              Button("Archive…", systemImage: "archivebox.fill") {
+                onArchive(record)
+              }
+              .dialogButton()
+            }
+          }
+        }
+      }
+      .frame(maxHeight: 260)
+      HStack(spacing: UIConstants.buttonSpacing) {
+        Spacer()
+        Button("Close", action: onClose)
+          .keyboardShortcut(.defaultAction)
+          .buttonStyle(.borderedProminent)
+          .dialogButton()
+      }
+    }
+    .padding(UIConstants.dialogPadding)
+    .frame(minWidth: UIConstants.dialogMinWidth)
   }
 }
 
@@ -220,28 +377,29 @@ struct InstallCommandsDialog: View {
         .foregroundStyle(.red)
         .fixedSize(horizontal: false, vertical: true)
       }
-      HStack {
+      HStack(spacing: UIConstants.buttonSpacing) {
         Spacer()
         if run.running {
           ProgressView().controlSize(.small)
         } else if run.failure == nil && run.log.isEmpty {
           Button("Cancel", action: onFinish)
             .keyboardShortcut(.cancelAction)
+            .dialogButton()
           Button("Run") {
             run.start(commands: commands, root: root)
           }
           .keyboardShortcut(.defaultAction)
-          .controlSize(.large)
           .buttonStyle(.borderedProminent)
+          .dialogButton()
         } else {
           Button("Close", action: onFinish)
             .keyboardShortcut(.defaultAction)
-            .controlSize(.large)
             .buttonStyle(.borderedProminent)
+            .dialogButton()
         }
       }
     }
-    .padding(20)
+    .padding(UIConstants.dialogPadding)
     .frame(minWidth: 520)
   }
 }

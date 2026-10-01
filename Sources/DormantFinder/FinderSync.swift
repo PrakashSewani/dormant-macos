@@ -15,6 +15,9 @@ final class FinderSync: FIFinderSync {
       submenu.addItem(
         makeItem(title: "Open Directory in Dormant", action: #selector(openDirectory(_:)))
       )
+      submenu.addItem(
+        makeItem(title: "Git Clone into Folder in Dormant", action: #selector(gitClone(_:)))
+      )
     } else {
       submenu.addItem(makeItem(title: "Clean", action: #selector(clean(_:))))
       submenu.addItem(makeItem(title: "Archive", action: #selector(archive(_:))))
@@ -52,6 +55,10 @@ final class FinderSync: FIFinderSync {
 
   @objc private func openDirectory(_ sender: Any?) {
     route(action: "open-directory")
+  }
+
+  @objc private func gitClone(_ sender: Any?) {
+    route(action: "git-clone")
   }
 
   private func route(action: String) {

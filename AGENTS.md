@@ -111,6 +111,9 @@ literally, do not invent deploy pipelines.
   releases (tags + full CI); a green PR build is the merge gate (see `docs/decisions.md` D-002).
 - 2026-09-26: Do not delegate implementation to subagents — they stall and get stuck. Do the work
   myself, sequentially, task by task.
+- 2026-10-01: The promo site auto-deploys from merges into `dev` (Cloudflare Workers Builds,
+  `dormant.prakashsewani.com`) — never hand-deploy over the Git-connected service; product/store
+  releases stay manual.
 
 <!-- One line per learned preference, dated. Examples:
 - 2026-09-18: Wants exact deploy commands, not auto-deploy pipelines.

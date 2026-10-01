@@ -21,6 +21,9 @@ final class ProjectListModel: ObservableObject {
   @Published private(set) var rows: [ProjectRow] = []
   @Published private(set) var projects: [ProjectRecord] = []
   @Published private(set) var sizeTexts: [String: String] = [:]
+  @Published private(set) var staleIDs: Set<String> = []
+  @Published private(set) var savings: SavingsReport?
+  @Published private(set) var idleCandidates: [ProjectRecord] = []
 
   func refresh() {
     var projectRows: [ProjectRecord] = []
@@ -32,6 +35,7 @@ final class ProjectListModel: ObservableObject {
     projects = projectRows
     rows = Self.buildRows(directories: directoryRows, projects: projectRows)
     computeSizes()
+    computeSavings()
   }
 
   func scan(roots: [URL]) {
@@ -100,8 +104,9 @@ final class ProjectListModel: ObservableObject {
   private func computeSizes() {
     let pending = Self.flatten(rows)
     Task {
-      let computed = await Task.detached { () -> [String: String] in
-        var result: [String: String] = [:]
+      let computed = await Task.detached { () -> (sizes: [String: String], staleIDs: Set<String>) in
+        var sizes: [String: String] = [:]
+        var staleIDs: Set<String> = []
         var registry: Registry?
         do {
           registry = try Registry(path: DormantPaths().registry)
@@ -112,46 +117,128 @@ final class ProjectListModel: ObservableObject {
           let url = URL(fileURLWithPath: row.path)
           if let record = row.record, record.state == .dormant {
             if let archive = try? registry?.archive(projectID: record.id) {
-              result[row.id] = Bytes.format(archive.size)
+              sizes[row.id] = Bytes.format(archive.size)
             }
           } else {
-            result[row.id] = Bytes.format(SizeAccounting.totalBytes(at: url))
+            sizes[row.id] = Bytes.format(SizeAccounting.totalBytes(at: url))
+            if let record = row.record,
+              case .repository(let status) = GitInspector().check(root: url),
+              Staleness.isStale(lastCommit: status.committerDate)
+            {
+              staleIDs.insert(record.id)
+            }
           }
         }
-        return result
+        return (sizes, staleIDs)
       }.value
-      sizeTexts = computed
+      sizeTexts = computed.sizes
+      staleIDs = computed.staleIDs
     }
   }
 
   private static func flatten(_ rows: [ProjectRow]) -> [ProjectRow] {
     rows + rows.flatMap { flatten($0.children ?? []) }
   }
+
+  private func computeSavings() {
+    let records = projects
+    Task {
+      let result = await Task.detached { () -> (SavingsReport, [ProjectRecord]) in
+        (Savings.report(for: records), IdleSuggestions.candidates(in: records))
+      }.value
+      savings = result.0
+      idleCandidates = result.1
+    }
+  }
 }
 
 struct ProjectListView: View {
   @StateObject private var model = ProjectListModel()
   @State private var selection: Set<String> = []
+  @State private var searchText = ""
   @Environment(\.openWindow) private var openWindow
+
+  private var filteredRows: [ProjectRow] {
+    let query = searchText.trimmingCharacters(in: .whitespaces)
+    guard !query.isEmpty else { return model.rows }
+    return model.rows.compactMap { row in
+      if row.title.localizedCaseInsensitiveContains(query)
+        || row.path.localizedCaseInsensitiveContains(query)
+      {
+        return row
+      }
+      guard let children = row.children else { return nil }
+      let matching = children.filter {
+        $0.title.localizedCaseInsensitiveContains(query)
+          || $0.path.localizedCaseInsensitiveContains(query)
+      }
+      guard !matching.isEmpty else { return nil }
+      return ProjectRow(
+        id: row.id, title: row.title, path: row.path, record: row.record, children: matching)
+    }
+  }
 
   var body: some View {
     VStack(spacing: 0) {
+      if let savings = model.savings, !savings.entries.isEmpty {
+        HStack(spacing: UIConstants.buttonSpacing) {
+          Label(
+            "\(Bytes.format(savings.totalBytes)) reclaimable across "
+              + "\(savings.entries.count) projects",
+            systemImage: "internaldrive"
+          )
+          .font(.callout)
+          Spacer()
+          Button("Clean All…", systemImage: "sparkles") {
+            ActionPresenter.shared.startCleanAll(records: model.projects)
+          }
+          .frame(minWidth: UIConstants.toolbarButtonMinWidth)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+        .padding(12)
+      }
+      if !model.idleCandidates.isEmpty {
+        HStack(spacing: UIConstants.buttonSpacing) {
+          Label(
+            "\(model.idleCandidates.count) projects idle for over "
+              + "\(Staleness.staleAfterDays) days",
+            systemImage: "moon.zzz"
+          )
+          .font(.callout)
+          .foregroundStyle(.secondary)
+          Spacer()
+          Button("Review…", systemImage: "archivebox") {
+            ActionPresenter.shared.reviewIdleCandidates(model.idleCandidates)
+          }
+          .frame(minWidth: UIConstants.toolbarButtonMinWidth)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+      }
       if model.rows.isEmpty {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
+          Image(systemName: "folder.badge.questionmark")
+            .font(.system(size: 42))
+            .foregroundStyle(.secondary)
           Text("No projects yet.").font(.headline)
           Text("Use Scan to find projects under a folder like ~/Projects.")
             .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else {
-        Table(model.rows, children: \.children, selection: $selection) {
+        Table(filteredRows, children: \.children, selection: $selection) {
           TableColumn("Name") { row in
             HStack(spacing: 6) {
               if let record = row.record {
-                StateBadge(record: record)
+                Image(systemName: ecosystemSymbol(record.ecosystem))
+                  .foregroundStyle(.secondary)
+                StateBadge(record: record, isStale: model.staleIDs.contains(record.id))
                 Text(record.name)
               } else {
-                Image(systemName: "folder")
+                Image(systemName: "folder.fill")
+                  .foregroundStyle(.secondary)
                 Text(row.title).fontWeight(.semibold)
               }
             }
@@ -177,13 +264,13 @@ struct ProjectListView: View {
         }
         .contextMenu(forSelectionType: String.self) { ids in
           if model.project(for: ids.first) != nil {
-            Button("Open") { act(.open, ids) }
-            Button("Clean…") { act(.clean, ids) }
-            Button("Archive…") { act(.archive, ids) }
-            Button("Restore…") { act(.restore, ids) }
+            Button("Open", systemImage: "play.fill") { act(.open, ids) }
+            Button("Clean…", systemImage: "sparkles") { act(.clean, ids) }
+            Button("Archive…", systemImage: "archivebox.fill") { act(.archive, ids) }
+            Button("Restore…", systemImage: "arrow.counterclockwise") { act(.restore, ids) }
             Divider()
-            Button("Project Info") { act(.projectInfo, ids) }
-            Button("Open Repository") { act(.openRepository, ids) }
+            Button("Project Info", systemImage: "info.circle") { act(.projectInfo, ids) }
+            Button("Open Repository", systemImage: "globe") { act(.openRepository, ids) }
           }
         }
       }
@@ -191,10 +278,13 @@ struct ProjectListView: View {
     .frame(minWidth: 720, minHeight: 360)
     .toolbar {
       ToolbarItemGroup {
-        Button("Scan…") { chooseRoots() }
-        Button("Refresh") { model.refresh() }
+        Button("Scan…", systemImage: "folder.badge.plus") { chooseRoots() }
+          .frame(minWidth: UIConstants.toolbarButtonMinWidth)
+        Button("Refresh", systemImage: "arrow.clockwise") { model.refresh() }
+          .frame(minWidth: UIConstants.toolbarButtonMinWidth)
       }
     }
+    .searchable(text: $searchText, prompt: "Search projects")
     .onAppear {
       ActionPresenter.shared.openMain = { path in
         openWindow(id: "main")
@@ -225,6 +315,17 @@ struct ProjectListView: View {
     return FileManager.default.fileExists(atPath: record.path) ? "Active" : "Missing"
   }
 
+  private func ecosystemSymbol(_ ecosystem: ProjectEcosystem) -> String {
+    switch ecosystem {
+    case .node: return "hexagon"
+    case .python: return "leaf"
+    case .rust: return "gearshape.2"
+    case .dotnet: return "square.grid.3x3"
+    case .go: return "gauge"
+    case .unknown: return "shippingbox"
+    }
+  }
+
   private func chooseRoots() {
     let panel = NSOpenPanel()
     panel.canChooseFiles = false
@@ -240,6 +341,7 @@ struct ProjectListView: View {
 
 struct StateBadge: View {
   let record: ProjectRecord
+  var isStale: Bool = false
 
   var body: some View {
     let (text, color) = badge
@@ -247,14 +349,14 @@ struct StateBadge: View {
       .font(.caption2)
       .padding(.horizontal, 6)
       .padding(.vertical, 2)
-      .background(color.opacity(0.2))
       .foregroundStyle(color)
-      .clipShape(Capsule())
+      .glassEffect(.regular.tint(color), in: .capsule)
   }
 
   private var badge: (String, Color) {
     if record.state == .dormant { return ("Dormant", .orange) }
     if !FileManager.default.fileExists(atPath: record.path) { return ("Missing", .red) }
+    if isStale { return ("Stale", .gray) }
     return ("Active", .green)
   }
 }

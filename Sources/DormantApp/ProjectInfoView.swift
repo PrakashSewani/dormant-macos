@@ -87,36 +87,36 @@ struct ProjectInfoView: View {
   let onClose: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: UIConstants.dialogSpacing) {
       Text(info.name).font(.headline)
       Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
-        row("Location", info.path)
-        row("State", info.stateText)
-        row("Ecosystem", info.ecosystemText)
-        row("Remote", info.remoteText)
-        row("Branch", info.branchText)
-        row("Last commit", info.lastCommitText)
-        row("Git status", info.gitStatusText)
-        row("Local size", info.localSizeText)
-        row("Core size", info.coreSizeText)
-        row("Regenerable size", info.regenerableSizeText)
-        row("Archive size", info.archiveSizeText)
+        row("mappin.and.ellipse", "Location", info.path)
+        row("power", "State", info.stateText)
+        row("cube", "Ecosystem", info.ecosystemText)
+        row("link", "Remote", info.remoteText)
+        row("arrow.triangle.branch", "Branch", info.branchText)
+        row("clock", "Last commit", info.lastCommitText)
+        row("checkmark.circle", "Git status", info.gitStatusText)
+        row("internaldrive", "Local size", info.localSizeText)
+        row("folder", "Core size", info.coreSizeText)
+        row("sparkles", "Regenerable size", info.regenerableSizeText)
+        row("archivebox", "Archive size", info.archiveSizeText)
       }
-      HStack {
+      HStack(spacing: UIConstants.buttonSpacing) {
         Spacer()
         Button("Close", action: onClose)
           .keyboardShortcut(.defaultAction)
-          .controlSize(.large)
           .buttonStyle(.borderedProminent)
+          .dialogButton()
       }
     }
-    .padding(20)
-    .frame(minWidth: 440)
+    .padding(UIConstants.dialogPadding)
+    .frame(minWidth: UIConstants.dialogMinWidth)
   }
 
-  private func row(_ label: String, _ value: String) -> some View {
+  private func row(_ symbol: String, _ label: String, _ value: String) -> some View {
     GridRow {
-      Text(label)
+      Label(label, systemImage: symbol)
         .foregroundStyle(.secondary)
         .gridColumnAlignment(.trailing)
       Text(value)

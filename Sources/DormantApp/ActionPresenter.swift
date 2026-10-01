@@ -35,6 +35,8 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
       startImport(fileURL)
     case .openDirectory:
       startOpenDirectory(fileURL)
+    case .gitClone:
+      startGitClone(fileURL)
     case .projectInfo:
       startProjectInfo(fileURL)
     case .openRepository:
@@ -80,6 +82,58 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
         message += "\n\(result.failures.count) path(s) were left in place: \(left)"
       }
       showAlert(title: "Clean finished", message: message)
+    }
+  }
+
+  func startCleanAll(records: [ProjectRecord]) {
+    Task {
+      let report = await Task.detached { Savings.report(for: records) }.value
+      guard !report.entries.isEmpty else {
+        showAlert(
+          title: "Nothing to clean",
+          message: "No regenerable development state found in the listed projects."
+        )
+        return
+      }
+      showDialog(title: "Clean All") {
+        CleanAllDialog(
+          report: report,
+          onConfirm: {
+            self.closeDialog()
+            self.runCleanAll(entries: report.entries)
+          },
+          onCancel: { self.closeDialog() }
+        )
+      }
+    }
+  }
+
+  private func runCleanAll(entries: [SavingsReport.Entry]) {
+    Task {
+      let outcome = await Task.detached { () -> (removed: Int, reclaimed: Int, failures: Int) in
+        var removed = 0
+        var reclaimed = 0
+        var failures = 0
+        for entry in entries {
+          let engine = CleanEngine()
+          let plan = engine.plan(root: URL(fileURLWithPath: entry.path))
+          let result = engine.execute(plan: plan)
+          removed += result.removed.count
+          failures += result.failures.count
+          reclaimed += plan.items
+            .filter { result.removed.contains($0.relativePath) }
+            .reduce(0) { $0 + $1.sizeBytes }
+        }
+        return (removed, reclaimed, failures)
+      }.value
+      NotificationCenter.default.post(name: .dormantDataChanged, object: nil)
+      var message =
+        "Removed \(outcome.removed) regenerable path(s), reclaiming "
+        + "\(Bytes.format(outcome.reclaimed))."
+      if outcome.failures > 0 {
+        message += "\n\(outcome.failures) path(s) were left in place."
+      }
+      showAlert(title: "Clean All finished", message: message)
     }
   }
 
@@ -251,6 +305,51 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
         }
       } catch {
         showAlert(title: "Open Directory failed", message: "\(error)")
+      }
+    }
+  }
+
+  func reviewIdleCandidates(_ candidates: [ProjectRecord]) {
+    guard !candidates.isEmpty else { return }
+    showDialog(title: "Idle Projects") {
+      IdleReviewDialog(
+        candidates: candidates,
+        onArchive: { record in
+          self.closeDialog()
+          self.present(action: .archive, fileURL: URL(fileURLWithPath: record.path))
+        },
+        onClose: { self.closeDialog() }
+      )
+    }
+  }
+
+  private func startGitClone(_ folder: URL) {
+    showDialog(title: "Git Clone") {
+      GitCloneDialog(
+        folder: folder,
+        onConfirm: { remote in
+          self.closeDialog()
+          self.runGitClone(remote: remote, into: folder)
+        },
+        onCancel: { self.closeDialog() }
+      )
+    }
+  }
+
+  private func runGitClone(remote: String, into folder: URL) {
+    Task {
+      do {
+        let destination = try await Task.detached { () -> URL in
+          let destination = try CloneEngine().clone(remote: remote, into: folder)
+          if let registry = try? Registry(path: DormantPaths().registry) {
+            _ = try? Scanner(registry: registry).register(projectAt: destination)
+          }
+          return destination
+        }.value
+        NotificationCenter.default.post(name: .dormantDataChanged, object: nil)
+        open(destination)
+      } catch {
+        showAlert(title: "Clone failed", message: "\(error)")
       }
     }
   }

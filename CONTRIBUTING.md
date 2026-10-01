@@ -21,8 +21,8 @@ directly to `dev` or `main`. The only PRs targeting `main` are release PRs from 
 - No new dependencies without a note explaining why.
 - For release PRs to `main`, apply exactly one `release:patch`, `release:minor`, or
 	`release:major` label. Merges without one of these labels do not publish a release.
-- A labeled release merge to `main` creates the version tag and GitHub release. Product and site
-	deployment remains manual.
+- A labeled release merge to `main` creates the version tag and GitHub release. Product
+	deployment remains manual; the promo site auto-deploys from merges into `dev`.
 
 ## Reporting bugs
 
