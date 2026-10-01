@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3c5a43"/>
+      <stop offset="1" stop-color="#213427"/>
+    </linearGradient>
+    <mask id="mark">
+      <rect width="64" height="64" fill="black"/>
+      <line x1="32.00" y1="8.96" x2="32.00" y2="20.48" stroke="white" stroke-width="1.41" stroke-linecap="round"/>
+      <path d="M 32.00 17.92 C 39.68 21.76, 44.80 29.44, 44.80 37.12 C 44.80 48.64, 39.04 55.04, 32.00 55.04 C 24.96 55.04, 19.20 48.64, 19.20 37.12 C 19.20 29.44, 24.32 21.76, 32.00 17.92 Z" fill="white" stroke="white" stroke-width="1.28" stroke-linejoin="round"/>
+  <path d="M 16.64 32.64 C 24.96 37.76, 39.04 37.76, 47.36 32.64" fill="none" stroke="black" stroke-width="1.28" stroke-linecap="round"/>
+  <path d="M 16.64 40.96 C 24.96 46.08, 39.04 46.08, 47.36 40.96" fill="none" stroke="black" stroke-width="1.28" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <rect width="64" height="64" rx="14.08" fill="url(#plate)"/>
+  <rect width="64" height="64" fill="#f4f1e8" mask="url(#mark)"/>
+</svg>

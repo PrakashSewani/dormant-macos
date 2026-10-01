@@ -1,42 +1,98 @@
 ---
 name: ship-release
-description: Release and deploy this project. Use when the user asks to release, ship, publish, or deploy. Deploys are manual by policy; this skill is filled in with the project's real commands at bootstrap time.
+description: Explain the automated release path and perform manual product/site deployments when asked. The release workflow is filled in at bootstrap time.
 license: MIT
 metadata:
   template: template-app-plus-site
   version: "1"
 ---
 
-# Ship a release
+# Release and deploy
 
 ## Rules (always)
 
-- **Version source of truth:** the manifest of the chosen stack (e.g. `package.json`,
-  `Cargo.toml`). A release tag is `v<version>` and must match it exactly.
-- **Deploys are manual.** Give the user exact, copy-pasteable commands; never wire an
-  auto-deploy pipeline, and never deploy without being asked.
-- **CI builds artifacts on tags; publishing and deploying are deliberate human steps.**
+- **Release trigger:** only a pull request merged into `main` can start release-related workflows.
+  Work on `dev` never publishes a release.
+- **Release selection:** a release PR has exactly one `release:patch`, `release:minor`, or
+  `release:major` label. A merge without one of these labels does not publish a release.
+- **Version source of truth:** the chosen stack's manifest. The workflow applies the labeled bump,
+  creates a `v<version>` tag matching the manifest, and publishes a GitHub release.
+- **Deployments are manual.** Give the user exact, copy-pasteable commands; never deploy without
+  being asked.
 - **Record the real procedure here** when the stack is chosen (see "Procedure" below), including
-  the failure path — how to yank a bad release.
+  the automated release workflow, artifact handling, and failure path — how to yank a bad release.
 
-## Procedure — NOT YET FILLED IN
+## Procedure
 
-The stack has not been chosen yet (`docs/decisions.md`, D-001). At bootstrap:
+Recorded at bootstrap (2026-09-26); updated 2026-09-26 for the labeled-release policy
+(`docs/decisions.md` D-007). Stack: Swift/Xcode, XcodeGen (`docs/decisions.md` D-001).
 
-1. Replace this section with the exact steps for the chosen stack: version bump → checks →
-   commit + tag → push → watch CI → verify the artifact.
-2. Add the deploy steps for each target (the product and the promo site separately), with the
-   exact CLI commands.
-3. Add the rollback/yank path.
-4. Only commands that were actually run belong here.
+**Version source of truth:** `MARKETING_VERSION` in `project.yml`. A release tag is `v<version>`
+and must match it exactly.
 
-## Skeleton to adapt
+Release (cut only when the human asks):
 
-```text
-1. Bump the version in <manifest>; add the CHANGELOG entry.
-2. Run the project's check command (docs/development.md) and the build.
-3. git add -A && git commit -m "Release v<version>"
-4. git tag v<version> && git push origin main --tags
-5. Watch CI (gh run watch); verify the artifact / release page.
-6. Deploy (exact command) — only when the user asks.
+1. Land the release content on `dev` through feature-branch PRs; `Scripts/check.sh` must pass.
+2. Open a release PR from `dev` to `main` and apply exactly one label: `release:patch`,
+   `release:minor`, or `release:major`.
+3. On merge, the release workflow (`.github/workflows/release.yml`) applies the labeled bump to
+   `MARKETING_VERSION`, updates `CHANGELOG.md`, commits on `main`, creates the `v<version>` tag,
+   and publishes the GitHub release with the `Dormant-v<version>.dmg` artifact (D-019). The DMG is
+   the Release build (`xcodebuild -project Dormant.xcodeproj -scheme Dormant -configuration Release
+   -destination 'platform=macOS' -derivedDataPath build build`) packaged by
+   `Scripts/make-dmg.sh` (`create-dmg`, drag-to-Applications layout) into `build/`.
+4. Verify: `gh run watch`, the release page, and a launch smoke of the downloaded DMG (mount,
+   drag or `brew install --cask`, launch).
+5. Promo site: **auto-deploys from `dev`** (D-025) — Cloudflare Workers Builds (service
+   `dormant-macos`, <https://dormant.prakashsewani.com>) builds `site/` and deploys on every
+   merge into `dev`. No manual publish; never hand-deploy over the Git-connected service. The
+   PR check "Workers Builds: dormant-macos" fails on pull requests (preview builds) and is
+   harmless — production builds from `dev` succeed. After the first release ships, flip the
+   site copy from "coming soon" to real download links and enable the brew command copy
+   (an ordinary commit on `dev`).
+6. Publish to the Homebrew tap (D-010; after the release is verified):
+
+   1. `gh release download v<version> -p "Dormant-v<version>.dmg" --dir /tmp/dormant-release`
+   2. `shasum -a 256 /tmp/dormant-release/Dormant-v<version>.dmg`
+   3. In [`PrakashSewani/homebrew-tap`](https://github.com/PrakashSewani/homebrew-tap): set
+      `version "<version>"` and `sha256 "<the shasum>"` in `Casks/dormant.rb` (first release:
+      create the file from the template below), commit `dormant <version>`, push to `main`.
+   4. Verify: `brew update && brew install --cask PrakashSewani/tap/dormant`, launch smoke
+      (approve "Open Anyway", enable the Finder extension). On an existing install:
+      `brew upgrade --cask dormant`. Uninstall safety check: `brew uninstall --cask dormant`
+      must leave `~/.dormant` (registry + archives) untouched.
+
+Cask template — `Casks/dormant.rb` in `PrakashSewani/homebrew-tap` (D-010: never `zap`
+`~/.dormant`, it holds the project registry and the archive store = user source code):
+
+```ruby
+cask "dormant" do
+  version "<version>"
+  sha256 "<sha256>"
+
+  url "https://github.com/PrakashSewani/dormant-macos/releases/download/v#{version}/Dormant-v#{version}.dmg"
+  name "Dormant"
+  desc "Put idle macOS project workspaces to sleep: clean, archive and restore them safely"
+  homepage "https://dormant.prakashsewani.com"
+
+  depends_on macos: ">= :tahoe"
+
+  app "Dormant.app"
+
+  caveats <<~EOS
+    Dormant is ad-hoc signed (no Apple Developer Program — docs/decisions.md D-001/D-010).
+    On first launch macOS blocks it: open System Settings → Privacy & Security, click
+    "Open Anyway", then launch Dormant again.
+    Then enable the Finder extension in System Settings → Extensions (Finder Extensions)
+    and relaunch Finder for the "Dormant ▸" context menu.
+  EOS
+
+  zap trash: "~/Library/Preferences/com.dormant.Dormant.plist"
+end
 ```
+
+Rollback / yank: `gh release delete v<version> --yes` (keep or delete the tag with
+`git tag -d v<version> && git push origin :refs/tags/v<version>`), and in
+`PrakashSewani/homebrew-tap` `git revert` the `dormant <version>` commit so installs fall back to
+the previous release. Fix forward with a new patch version. There is no store listing to pull and
+nothing runs on Dormant servers (local-first).

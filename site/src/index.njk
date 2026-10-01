@@ -1,0 +1,194 @@
+---
+layout: base.njk
+title: Dormant — a macOS utility for project workspaces
+description: Dormant separates the source you wrote from the gigabytes your tools generated. Clean what can be regenerated, archive idle projects, and wake them exactly as you left them.
+---
+
+<section class="hero">
+  <p class="eyebrow">A macOS utility for project workspaces</p>
+  <h1>The repository is permanent.<br>The local development environment is disposable.</h1>
+  <p class="lede">Your source is small. Your workspace is not. Dormant separates the two: clean what
+    can be regenerated, put idle projects to sleep as verified archives, and wake them exactly as
+    you left them.</p>
+  <div class="hero-actions">
+    <span class="button button-primary button-soon">Coming soon for macOS</span>
+    <a class="button button-secondary" href="#moves">See how it works</a>
+  </div>
+  <p class="requirements">macOS 26 or later · Menu bar app with a Finder extension · No account, no network</p>
+  <div class="install-block">
+    <pre class="install-line"><code>brew tap PrakashSewani/tap &amp;&amp; brew install --cask dormant</code></pre>
+    <button class="copy-button" type="button" disabled>Copy</button>
+  </div>
+  <p class="requirements">Not published yet — the DMG download and this install go live with the
+    first release. Brew installs from the DMG into /Applications; downloading it directly shows
+    the drag-into-Applications window.</p>
+  <p class="requirements">First launch: System Settings → Privacy &amp; Security → "Open Anyway" (Dormant is ad-hoc signed).</p>
+</section>
+
+<section class="proof" aria-labelledby="proof-title">
+  <h2 id="proof-title">Where the gigabytes actually are</h2>
+  <p class="section-lede">Dormant reads a workspace the way you wish you had: what your tools
+    generated is disposable, what you wrote is not.</p>
+
+  <div class="ledger-pair">
+    <article class="ledger" aria-label="Workspace sizes before archiving">
+      <header class="ledger-head">
+        <span class="ledger-title">On disk</span>
+        <span class="ledger-total">2.31 GB</span>
+      </header>
+      <p class="ledger-path">~/Projects/heatmap</p>
+      <table class="ledger-table">
+        <tbody>
+          <tr><td>node_modules/</td><td class="num">2.18 GB</td><td class="kind kind-re">regenerable</td></tr>
+          <tr><td>target/</td><td class="num">112 MB</td><td class="kind kind-re">regenerable</td></tr>
+          <tr><td>.next/</td><td class="num">41 MB</td><td class="kind kind-re">regenerable</td></tr>
+          <tr><td>source, .git, docs, configs</td><td class="num">14.3 MB</td><td class="kind kind-core">core</td></tr>
+        </tbody>
+      </table>
+      <p class="ledger-note">Unclassified files are never guessed at. They travel with the archive,
+        labeled in the manifest.</p>
+    </article>
+
+    <article class="ledger ledger-stored" aria-label="Archive store after archiving">
+      <header class="ledger-head">
+        <span class="ledger-title">In the store</span>
+        <span class="ledger-total">4.9 MB</span>
+      </header>
+      <p class="ledger-path">~/.dormant/store/6f3b21c4/</p>
+      <table class="ledger-table">
+        <tbody>
+          <tr><td>core.tar.gz</td><td class="num">4.9 MB</td><td class="kind kind-core">421 files</td></tr>
+          <tr><td>manifest.json</td><td class="num">96 KB</td><td class="kind kind-core">SHA-256 verified</td></tr>
+        </tbody>
+      </table>
+      <p class="ledger-note">The working copy is removed only after the archive passes an entry-set
+        check against what it should contain.</p>
+    </article>
+  </div>
+
+  <details class="manifest">
+    <summary>manifest.json</summary>
+    <pre><code>{
+  "manifestVersion": 1,
+  "project": { "name": "heatmap", "originalPath": "/Users/you/Projects/heatmap",
+               "ecosystems": ["node", "rust"], "archivedAt": "2026-09-26T08:14:02Z" },
+  "git": { "isRepo": true, "branch": "dev", "dirty": false, "modifiedCount": 0 },
+  "tarball": { "name": "core.tar.gz", "size": 4912384, "fileCount": 421,
+               "sha256": "9f2c…" },
+  "files": [ { "path": "src/heatmap.rs", "size": 5821, "kind": "core" },
+             { "path": "notes.txt", "size": 412, "kind": "unclassified" } ]
+}</code></pre>
+  </details>
+</section>
+
+<section class="moves" id="moves" aria-labelledby="moves-title">
+  <h2 id="moves-title">Three moves</h2>
+  <ol class="move-list">
+    <li class="move">
+      <span class="move-num" aria-hidden="true">01</span>
+      <div class="move-body">
+        <h3>Clean</h3>
+        <p>Remove dependency folders, build output and caches. You see every path with its size
+          before anything happens, and only paths classified as regenerable are ever touched.</p>
+        <p class="move-safety">A folder it cannot classify stays on disk. Guessing is not a mode.</p>
+      </div>
+    </li>
+    <li class="move">
+      <span class="move-num" aria-hidden="true">02</span>
+      <div class="move-body">
+        <h3>Archive</h3>
+        <p>Clean, compress everything that remains into a local store, and remove the working copy.
+          Days or gigabytes later, the project is one small, verified archive.</p>
+        <p class="move-safety">Uncommitted work raises a warning with modified and untracked counts
+          before anything is packed.</p>
+      </div>
+    </li>
+    <li class="move move-wake">
+      <span class="move-num" aria-hidden="true">03</span>
+      <div class="move-body">
+        <h3>Restore</h3>
+        <p>Unpack to the original path, verify every file against the manifest checksums, and show
+          the exact install commands before running a single one. Your tools are found where you
+          installed them — npm under nvm, pnpm under Homebrew, uv, cargo, go — and a missing tool
+          fails loudly instead of being skipped.</p>
+        <p class="move-safety">If verification fails, the archive stays put and the extracted tree is
+          left for inspection.</p>
+      </div>
+    </li>
+  </ol>
+
+  <div class="restore-proof">
+    <p class="restore-label">What Restore shows before it runs anything</p>
+    <pre><code>Restore  ~/Projects/heatmap
+  npm install        package-lock.json
+  cargo build        Cargo.toml
+
+Nothing runs until you confirm.</code></pre>
+  </div>
+
+  <p class="also">From the app: <strong>Project Info</strong> (local size versus core versus
+    regenerable, git status, branch, remote), <strong>Open</strong> in VS Code, and
+    <strong>Open Repository</strong> in the browser. From Finder, a <strong>Dormant ▸</strong>
+    right-click menu: Clean, Archive, Restore and Import Folder in Dormant on a folder; Open
+    Directory in Dormant on empty space — and <strong>Git Clone into Folder in Dormant</strong>:
+    paste a repository URL and the clone lands in that folder, registered and open in VS Code.</p>
+  <p class="also">In the main window: <strong>search</strong> across projects and paths,
+    <strong>Stale</strong> badges for anything without a commit in 30 days, a live savings summary
+    with one-click <strong>Clean All…</strong> (previewed per project first), and a quiet note when
+    a project sits idle past 30 days — Dormant suggests archiving and never does it on its own.
+    The menu bar lists your projects for one-click <strong>Open</strong> and
+    <strong>Restore</strong>.</p>
+</section>
+
+<section class="directories" id="directories" aria-labelledby="directories-title">
+  <h2 id="directories-title">Every workspace, by directory</h2>
+  <p class="section-lede">Work projects in one folder, personal projects in another? Import each
+    folder once and Dormant keeps the grouping — and shows how much disk every directory is
+    eating: the whole folder on disk, projects, dependencies, build output and all.</p>
+
+  <article class="ledger" aria-label="Directory view with per-directory disk usage">
+    <header class="ledger-head">
+      <span class="ledger-title">Dormant — directories</span>
+      <span class="ledger-total">18.7 GB</span>
+    </header>
+    <p class="ledger-path">grouped by imported folder</p>
+    <table class="ledger-table">
+      <tbody>
+        <tr><td>Work</td><td class="num">14.2 GB</td><td class="kind kind-re">6 projects</td></tr>
+        <tr><td>Personal</td><td class="num">4.5 GB</td><td class="kind kind-re">2 projects</td></tr>
+      </tbody>
+    </table>
+    <p class="ledger-note">Each directory expands to its projects with their own sizes. Clean and
+      Archive act per project; the directory total tells you where the gigabytes are before you
+      pick one.</p>
+  </article>
+
+  <div class="restore-proof">
+    <p class="restore-label">Right-click in Finder</p>
+    <pre><code>on a folder      Dormant ▸  Clean · Archive · Restore · Import Folder in Dormant
+on empty space   Dormant ▸  Open Directory in Dormant · Git Clone into Folder in Dormant</code></pre>
+  </div>
+</section>
+
+<section class="rules" id="rules" aria-labelledby="rules-title">
+  <h2 id="rules-title">The rules Dormant will not break</h2>
+  <ul class="rule-list">
+    <li>A Git repository is never deleted.</li>
+    <li>Uncommitted changes are never silently discarded.</li>
+    <li>A file it cannot classify is never removed.</li>
+    <li>Nothing is cleaned merely for being large.</li>
+    <li>Every destructive action is previewed and confirmed in the app.</li>
+    <li>Recovery needs no account, no network, no Dormant server.</li>
+  </ul>
+</section>
+
+<section class="cta" aria-labelledby="cta-title">
+  <h2 id="cta-title">Put your next idle project to sleep.</h2>
+  <p class="section-lede">Clean what can be regenerated. Keep what matters. Wake it when you need
+    it.</p>
+  <div class="hero-actions">
+    <span class="button button-primary button-soon">Coming soon for macOS</span>
+  </div>
+  <p class="requirements">Not published yet — the first release is on its way.</p>
+  <p class="requirements">macOS 26 or later · Free · Your projects stay on your Mac</p>
+</section>

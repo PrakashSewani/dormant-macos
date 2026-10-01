@@ -1,0 +1,113 @@
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true
+    runs-on: macos-26
+    steps:
+      - name: Determine release label
+        id: label
+        env:
+          LABELS_JSON: ${{ toJSON(github.event.pull_request.labels) }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          labels = [l["name"] for l in json.loads(os.environ["LABELS_JSON"])]
+          bumps = [l.split(":", 1)[1] for l in labels
+                   if l in ("release:patch", "release:minor", "release:major")]
+          out = os.environ["GITHUB_OUTPUT"]
+          if not bumps:
+              open(out, "a").write("bump=none\n")
+              print("No release label — nothing to publish.")
+          elif len(bumps) > 1:
+              raise SystemExit("Multiple release labels — refusing to publish.")
+          else:
+              open(out, "a").write(f"bump={bumps[0]}\n")
+          PY
+
+      - uses: actions/checkout@v7.0.1
+        if: steps.label.outputs.bump != 'none'
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Bump version and changelog
+        id: version
+        if: steps.label.outputs.bump != 'none'
+        run: |
+          set -euo pipefail
+          current=$(sed -n 's/.*MARKETING_VERSION: "\([0-9][0-9.]*\)".*/\1/p' project.yml | head -1)
+          IFS=. read -r major minor patch <<< "$current"
+          case "${{ steps.label.outputs.bump }}" in
+            patch) patch=$((patch + 1)) ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+          esac
+          version="$major.$minor.$patch"
+          git rev-parse -q --verify "refs/tags/v$version" >/dev/null \
+            && { echo "Tag v$version already exists" >&2; exit 1; } || true
+          sed -i '' "s/MARKETING_VERSION: \"$current\"/MARKETING_VERSION: \"$version\"/" project.yml
+          python3 - "$version" <<'PY'
+          import datetime, sys
+          version = sys.argv[1]
+          date = datetime.date.today().isoformat()
+          path = "CHANGELOG.md"
+          text = open(path).read()
+          marker = "## [Unreleased]"
+          if marker not in text:
+              raise SystemExit("CHANGELOG.md has no '## [Unreleased]' section")
+          heading = f"## [{version}] - {date}"
+          text = text.replace(marker, f"{marker}\n\n{heading}", 1)
+          open(path, "w").write(text)
+          start = text.find(heading) + len(heading)
+          rest = text[start:]
+          end = rest.find("\n## [")
+          notes = rest[:end] if end != -1 else rest
+          open("release-notes.md", "w").write(notes.strip() + "\n")
+          PY
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Commit, tag, push
+        if: steps.label.outputs.bump != 'none'
+        run: |
+          set -euo pipefail
+          version="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add project.yml CHANGELOG.md
+          git commit -m "Release v$version"
+          git tag "v$version"
+          git push origin main "v$version"
+
+      - run: brew install xcodegen create-dmg
+        if: steps.label.outputs.bump != 'none'
+      - run: xcodegen generate
+        if: steps.label.outputs.bump != 'none'
+      - run: xcodebuild -project Dormant.xcodeproj -scheme Dormant -configuration Release -destination 'platform=macOS' -derivedDataPath build build
+        if: steps.label.outputs.bump != 'none'
+      - run: Scripts/make-dmg.sh
+        if: steps.label.outputs.bump != 'none'
+
+      - name: Publish GitHub release
+        if: steps.label.outputs.bump != 'none'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="${{ steps.version.outputs.version }}"
+          gh release create "v$version" \
+            "build/Dormant-v$version.dmg" \
+            --title "Dormant v$version" \
+            --notes-file release-notes.md
