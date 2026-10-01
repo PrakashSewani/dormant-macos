@@ -15,29 +15,30 @@ rule 4. Keep exactly one phase `in progress`.
 
 ## Current handoff
 
-- **Phase:** 4 — launch, with a pre-release UI/distribution batch in flight.
-- **Done this session:** (0) PR #7 (D-015–D-017) and the D-014 icon work are merged into `dev`;
-  `dev` pulled. (1) **App-copy cleanup** (human-approved disposition): the Release build is
-  installed as `/Applications/Dormant.app`; the three build-artifact copies (`build/Debug`,
-  `build/Release`, DerivedData `Debug`) are deleted — `~/.dormant` untouched. (2) **Docs-first for
-  the new batch**, decisions recorded as **D-018–D-024**: Liquid Glass on a macOS 26 floor
-  (deployment target 26.0, cask `>= :tahoe`), DMG as the release artifact (supersedes the zip;
-  `Scripts/make-dmg.sh`, cask installs from the DMG), Git Clone into Folder (Finder empty space →
-  URL prompt → clone → register → open in VS Code), search + stale badges (30-day threshold),
-  savings dashboard + batch clean (explicit opt-in), auto-archive suggestions (never automatic),
-  menu-bar quick actions. `product.md` / `architecture.md` / `development.md` updated to match.
-- **In progress:** the implementation on `feature/ui-glass-batch` (toolchain gate passed: Xcode
-  27.0, 26+ SDK), following the plan in `~/.commandcode/plans/dormant-ui-glass-batch.md`.
-- **Verified:** `mdfind` + `ls` confirm exactly one `Dormant.app` (`/Applications`); the app
-  launches from there (Finder extension re-registration). Implementation checks not yet run.
-- **Blocked by:** (1) human-only GitHub settings for D-007: the `release:patch` / `release:minor`
-  / `release:major` labels (branch default is `dev` already — PR protection unknown); (2) the
-  human's hands-on Finder round trip for D-015–D-017 is assumed done (told "first two are done").
-- **Next action (new session):** finish `feature/ui-glass-batch` per the plan (UIConstants/sizing →
-  icons → glass → git clone → search/stale → dashboard/clean → menu-bar → suggestions → DMG),
-  `Scripts/check.sh` green, then push + PR → `dev`. After merge: human hands-on pass of the new UI
-  and features, then the release PR `dev` → `main` with one `release:*` label (ship-release skill)
-  → tap publish → manual site deploy when the human asks → flip the site to real download links.
+- **Phase:** 4 — launch; the pre-release UI/distribution batch is complete on
+  `feature/ui-glass-batch` (PR → `dev`).
+- **Done this session:** (0) PR #7 + D-014 merged into `dev`; pulled. (1) **App cleanup**: exactly
+  one `Dormant.app`, the fresh Release build at `/Applications/Dormant.app`; all build-artifact
+  copies deleted (`~/.dormant` untouched). (2) **D-018–D-024 recorded and implemented** on
+  `feature/ui-glass-batch`: Liquid Glass on a macOS 26 floor (target 26.0, UIConstants button min
+  sizing, SF Symbols everywhere, brand-mark menu-bar icon `Mark.imageset`), **Git Clone into
+  Folder** (D-020), **search + Stale badges** (D-021), **savings summary + Clean All…** (D-022),
+  **auto-archive suggestions** (D-023), **menu-bar quick actions** (D-024), **DMG distribution**
+  (D-019: `Scripts/make-dmg.sh`, release.yml ships `Dormant-v<version>.dmg`, cask template →
+  `.dmg` + `>= :tahoe`). Site copy and CHANGELOG cover the batch.
+- **Verified:** `Scripts/check.sh` end to end — lint clean, generate + build OK, **123 tests / 18
+  suites pass** (19 new: CloneEngine, Staleness, Savings, IdleSuggestions), site builds (8 assets).
+  DMG smoke: Release build → `Scripts/make-dmg.sh` → `build/Dormant-v0.1.0.dmg` with the
+  drag-to-Applications window (create-dmg 1.3.0). Fresh Release app relaunched from
+  `/Applications` for the hands-on pass.
+- **Blocked by:** (1) the human's hands-on pass of the new UI/features (Finder: Git Clone round
+  trip; app: glass look, button sizing, icons, search/stale, Clean All, idle banner, menu-bar
+  actions); (2) human-only GitHub settings for D-007: the `release:patch` / `release:minor` /
+  `release:major` labels (default branch is `dev`; PR protection unknown).
+- **Next action (new session):** merge the batch PR after the human's pass, then the release PR
+  `dev` → `main` with one `release:*` label (ship-release skill — DMG path) → tap publish
+  (`Casks/dormant.rb` first creation from the template) → manual site deploy when the human asks
+  → flip the site from "coming soon" to real download links and enable the brew command copy.
 
 ---
 
