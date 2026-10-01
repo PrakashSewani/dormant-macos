@@ -126,6 +126,86 @@ func write(_ rep: NSBitmapImageRep, _ relativePath: String) {
   print("wrote \(relativePath)")
 }
 
+func renderMark(size: Int) -> NSBitmapImageRep {
+  // Template silhouette of the mark (D-018): black shapes on transparent, chord
+  // wraps cut out. Status items and other templates recolor it.
+  let s = CGFloat(size)
+  guard
+    let rep = NSBitmapImageRep(
+      bitmapDataPlanes: nil, pixelsWide: size, pixelsHigh: size,
+      bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+      colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+    ),
+    let ctx = NSGraphicsContext(bitmapImageRep: rep)
+  else { fatalError("could not create bitmap context") }
+  rep.size = NSSize(width: s, height: s)
+  NSGraphicsContext.saveGraphicsState()
+  NSGraphicsContext.current = ctx
+
+  func p(_ x: Double, _ y: Double) -> NSPoint {
+    NSPoint(x: CGFloat(x) * s, y: (1 - CGFloat(y)) * s)
+  }
+
+  ctx.cgContext.beginTransparencyLayer(auxiliaryInfo: nil)
+  NSColor.black.setFill()
+  NSColor.black.setStroke()
+
+  let thread = NSBezierPath()
+  thread.move(to: p(0.5, threadTop))
+  thread.line(to: p(0.5, threadBottom))
+  thread.lineCapStyle = .round
+  thread.lineWidth = max(1, threadWidth * s)
+  thread.stroke()
+
+  let pod = NSBezierPath()
+  pod.move(to: p(podStart.x, podStart.y))
+  for (c1, c2, end) in podSegs {
+    pod.curve(to: p(end.0, end.1), controlPoint1: p(c1.0, c1.1), controlPoint2: p(c2.0, c2.1))
+  }
+  pod.close()
+  pod.lineJoinStyle = .round
+  pod.lineWidth = podStroke * s
+  pod.stroke()
+  pod.fill()
+
+  ctx.cgContext.setBlendMode(.clear)
+  for y in chords {
+    let chord = NSBezierPath()
+    chord.move(to: p(chordSpan.x0, y - chordLift))
+    chord.curve(
+      to: p(chordSpan.x1, y - chordLift),
+      controlPoint1: p(0.39, y + chordSag), controlPoint2: p(0.61, y + chordSag)
+    )
+    chord.lineCapStyle = .round
+    chord.lineWidth = chordWidth * s
+    chord.stroke()
+  }
+  ctx.cgContext.setBlendMode(.normal)
+  ctx.cgContext.endTransparencyLayer()
+
+  NSGraphicsContext.restoreGraphicsState()
+  return rep
+}
+
+let markSet = "Sources/DormantApp/Assets.xcassets/Mark.imageset"
+write(renderMark(size: 18), "\(markSet)/mark-18.png")
+write(renderMark(size: 36), "\(markSet)/mark-18@2x.png")
+let markContents = """
+  {
+    "images" : [
+      { "filename" : "mark-18.png",    "idiom" : "universal", "scale" : "1x" },
+      { "filename" : "mark-18@2x.png", "idiom" : "universal", "scale" : "2x" }
+    ],
+    "info" : { "author" : "xcode", "version" : 1 },
+    "properties" : { "template-rendering-intent" : "template" }
+  }
+  """
+try! markContents.write(
+  to: root.appendingPathComponent("\(markSet)/Contents.json"),
+  atomically: true, encoding: .utf8
+)
+print("wrote \(markSet)/Contents.json")
+
 func f(_ v: Double) -> String { String(format: "%.2f", v * 64) }
 
 let appSet = "Sources/DormantApp/Assets.xcassets/AppIcon.appiconset"

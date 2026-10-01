@@ -137,7 +137,10 @@ struct ProjectListView: View {
   var body: some View {
     VStack(spacing: 0) {
       if model.rows.isEmpty {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
+          Image(systemName: "folder.badge.questionmark")
+            .font(.system(size: 42))
+            .foregroundStyle(.secondary)
           Text("No projects yet.").font(.headline)
           Text("Use Scan to find projects under a folder like ~/Projects.")
             .foregroundStyle(.secondary)
@@ -148,10 +151,13 @@ struct ProjectListView: View {
           TableColumn("Name") { row in
             HStack(spacing: 6) {
               if let record = row.record {
+                Image(systemName: ecosystemSymbol(record.ecosystem))
+                  .foregroundStyle(.secondary)
                 StateBadge(record: record)
                 Text(record.name)
               } else {
-                Image(systemName: "folder")
+                Image(systemName: "folder.fill")
+                  .foregroundStyle(.secondary)
                 Text(row.title).fontWeight(.semibold)
               }
             }
@@ -177,13 +183,13 @@ struct ProjectListView: View {
         }
         .contextMenu(forSelectionType: String.self) { ids in
           if model.project(for: ids.first) != nil {
-            Button("Open") { act(.open, ids) }
-            Button("Clean…") { act(.clean, ids) }
-            Button("Archive…") { act(.archive, ids) }
-            Button("Restore…") { act(.restore, ids) }
+            Button("Open", systemImage: "play.fill") { act(.open, ids) }
+            Button("Clean…", systemImage: "sparkles") { act(.clean, ids) }
+            Button("Archive…", systemImage: "archivebox.fill") { act(.archive, ids) }
+            Button("Restore…", systemImage: "arrow.counterclockwise") { act(.restore, ids) }
             Divider()
-            Button("Project Info") { act(.projectInfo, ids) }
-            Button("Open Repository") { act(.openRepository, ids) }
+            Button("Project Info", systemImage: "info.circle") { act(.projectInfo, ids) }
+            Button("Open Repository", systemImage: "globe") { act(.openRepository, ids) }
           }
         }
       }
@@ -191,8 +197,10 @@ struct ProjectListView: View {
     .frame(minWidth: 720, minHeight: 360)
     .toolbar {
       ToolbarItemGroup {
-        Button("Scan…") { chooseRoots() }
-        Button("Refresh") { model.refresh() }
+        Button("Scan…", systemImage: "folder.badge.plus") { chooseRoots() }
+          .frame(minWidth: UIConstants.toolbarButtonMinWidth)
+        Button("Refresh", systemImage: "arrow.clockwise") { model.refresh() }
+          .frame(minWidth: UIConstants.toolbarButtonMinWidth)
       }
     }
     .onAppear {
@@ -225,6 +233,17 @@ struct ProjectListView: View {
     return FileManager.default.fileExists(atPath: record.path) ? "Active" : "Missing"
   }
 
+  private func ecosystemSymbol(_ ecosystem: ProjectEcosystem) -> String {
+    switch ecosystem {
+    case .node: return "hexagon"
+    case .python: return "leaf"
+    case .rust: return "gearshape.2"
+    case .dotnet: return "square.grid.3x3"
+    case .go: return "gauge"
+    case .unknown: return "shippingbox"
+    }
+  }
+
   private func chooseRoots() {
     let panel = NSOpenPanel()
     panel.canChooseFiles = false
@@ -247,9 +266,8 @@ struct StateBadge: View {
       .font(.caption2)
       .padding(.horizontal, 6)
       .padding(.vertical, 2)
-      .background(color.opacity(0.2))
       .foregroundStyle(color)
-      .clipShape(Capsule())
+      .glassEffect(.regular.tint(color), in: .capsule)
   }
 
   private var badge: (String, Color) {

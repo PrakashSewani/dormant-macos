@@ -4,27 +4,33 @@ import SwiftUI
 
 struct DialogScaffold<Content: View>: View {
   let title: String
+  let icon: String
   let okTitle: String
   let onConfirm: () -> Void
   let onCancel: () -> Void
   @ViewBuilder let content: Content
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      Text(title).font(.headline)
+    VStack(alignment: .leading, spacing: UIConstants.dialogSpacing) {
+      Label(title, systemImage: icon)
+        .font(.headline)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .glassEffect(.regular, in: .capsule)
       content
-      HStack {
+      HStack(spacing: UIConstants.buttonSpacing) {
         Spacer()
         Button("Cancel", action: onCancel)
           .keyboardShortcut(.cancelAction)
+          .dialogButton()
         Button(okTitle, action: onConfirm)
           .keyboardShortcut(.defaultAction)
-          .controlSize(.large)
           .buttonStyle(.borderedProminent)
+          .dialogButton()
       }
     }
-    .padding(20)
-    .frame(minWidth: 440)
+    .padding(UIConstants.dialogPadding)
+    .frame(minWidth: UIConstants.dialogMinWidth)
   }
 }
 
@@ -36,17 +42,24 @@ struct CleanPreviewDialog: View {
   var body: some View {
     DialogScaffold(
       title: "Reclaim \(Bytes.format(plan.totalReclaim))?",
+      icon: "sparkles",
       okTitle: "Clean",
       onConfirm: onConfirm,
       onCancel: onCancel
     ) {
       VStack(alignment: .leading, spacing: 8) {
-        Text("These regenerable paths will be removed permanently — nothing is archived. Everything else is kept:")
-          .fixedSize(horizontal: false, vertical: true)
-        Text("To make the project work again afterwards, rebuild this state with its own dependency commands (for example cargo build or npm install).")
-          .font(.caption)
-          .foregroundStyle(.secondary)
-          .fixedSize(horizontal: false, vertical: true)
+        Text(
+          "These regenerable paths will be removed permanently — "
+            + "nothing is archived. Everything else is kept:"
+        )
+        .fixedSize(horizontal: false, vertical: true)
+        Text(
+          "To make the project work again afterwards, rebuild this state with its "
+            + "own dependency commands (for example cargo build or npm install)."
+        )
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
         ScrollView {
           VStack(alignment: .leading, spacing: 4) {
             ForEach(plan.items, id: \.relativePath) { item in
@@ -78,6 +91,7 @@ struct ArchiveConfirmDialog: View {
   var body: some View {
     DialogScaffold(
       title: "Archive \(name)?",
+      icon: "archivebox.fill",
       okTitle: "Archive",
       onConfirm: onConfirm,
       onCancel: onCancel
@@ -122,6 +136,7 @@ struct RestoreDialog: View {
   var body: some View {
     DialogScaffold(
       title: "Restore \(record.name)?",
+      icon: "arrow.counterclockwise",
       okTitle: "Restore",
       onConfirm: confirmSelection,
       onCancel: onCancel
@@ -220,28 +235,29 @@ struct InstallCommandsDialog: View {
         .foregroundStyle(.red)
         .fixedSize(horizontal: false, vertical: true)
       }
-      HStack {
+      HStack(spacing: UIConstants.buttonSpacing) {
         Spacer()
         if run.running {
           ProgressView().controlSize(.small)
         } else if run.failure == nil && run.log.isEmpty {
           Button("Cancel", action: onFinish)
             .keyboardShortcut(.cancelAction)
+            .dialogButton()
           Button("Run") {
             run.start(commands: commands, root: root)
           }
           .keyboardShortcut(.defaultAction)
-          .controlSize(.large)
           .buttonStyle(.borderedProminent)
+          .dialogButton()
         } else {
           Button("Close", action: onFinish)
             .keyboardShortcut(.defaultAction)
-            .controlSize(.large)
             .buttonStyle(.borderedProminent)
+            .dialogButton()
         }
       }
     }
-    .padding(20)
+    .padding(UIConstants.dialogPadding)
     .frame(minWidth: 520)
   }
 }
