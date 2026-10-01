@@ -52,6 +52,9 @@ empty space (D-016, D-017):
 - **Open Directory in Dormant** (Finder, empty-space right-click) — open the folder in the app:
   it is imported as a Dormant directory (with its projects) and selected in the main window.
   Shown on empty-space clicks only, never on folder items (D-017).
+- **Git Clone into Folder in Dormant** (Finder, empty-space right-click) — Dormant asks for the
+  repository URL, clones it into the clicked folder, registers it in the registry, and opens it
+  in VS Code automatically (D-020).
 - **Project Info** (app) — why a project is consuming disk: location, remote, branch, git status,
   last commit, local size vs core vs regenerable size, Active/Dormant status.
 - **Open Repository** (app) — open the project's git remote in the browser (any common host, no
@@ -62,11 +65,15 @@ empty space (D-016, D-017):
 - **Archive storage strategy:** clean regenerable state, compress what remains to a local archive
   (`~/.dormant/store/`), remove the working copy. Restore = decompress + rebuild. Fully offline;
   no git remote or account required to recover.
-- **App surface:** menu bar app with a main window (project list, info); Finder actions show their
-  confirmation dialogs.
+- **App surface:** menu bar app with quick actions (Open/Restore on recent projects, D-024) and a
+  main window (searchable project list with stale badges, savings summary, info); Finder actions
+  show their confirmation dialogs.
 - **Project tracking:** local registry (scanning a root the user chooses, e.g. `~/Projects`) plus
   an index of every archive Dormant creates — this is what makes dormant projects identifiable
   and restorable.
+- **Discovery and suggestions:** the list is searchable and flags stale projects (no commit in 30+
+  days); a summary shows total reclaimable space with an explicit "Clean All…"; projects idle 30+
+  days get an archive *suggestion* the user acts on — nothing is ever automatic (D-021–D-023).
 - **Directories:** imported folders (e.g. `~/Projects/Work`, `~/Projects/Personal`) are tracked
   as directories; the app groups their projects and shows how much disk each directory is eating
   — the whole folder on disk: projects, dependencies, build output, everything (D-017).

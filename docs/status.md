@@ -15,40 +15,29 @@ rule 4. Keep exactly one phase `in progress`.
 
 ## Current handoff
 
-- **Phase:** 4 — launch.
-- **Done this session:** (1) **D-015** — `ToolLocator`: every external tool (all package managers
-  + `code`) resolves from a hardcoded ordered search of known install locations (nvm
-  newest-node-first, volta, bun, cargo, asdf shims, `~/.local/bin`, `~/go/bin`, Homebrew,
-  `/usr/local…`, system); missing tool = exit 127 with the searched list and the queue stops; no
-  configuration, no fallbacks. Open is hardcoded `code .` (D-006 superseded, editor setting
-  deleted). (2) **D-016** — Finder "Dormant ▸" hover submenu rebuilt with an explicit root item
-  (Finder inserts menu items flat and ignores `NSMenu` titles). (3) **D-017** — directories are
-  first-class: registry schema v2 (`directories` table, v1 upgrades in place);
-  `Scanner.importDirectory` (import = upsert directory + scan); Finder menus scoped by click
-  kind — folder items get Clean/Archive/Restore/Import Folder in Dormant, **empty space** gets
-  **Open Directory in Dormant** (imports the folder, opens the app with it selected); the main
-  window groups projects under their deepest containing directory (`DirectoryGrouping`) and
-  shows each directory's **whole-folder on-disk size**. (4) Site copy covers the new features
-  (directories section, Finder menus, toolchain-aware Restore). (5) Merged `origin/dev` — the
-  D-014 icon work landed there via PR #6 (`3916497`) — into `feature/icon-cocoon`, resolving the
-  decisions/status conflicts in favour of this session's text.
-- **Verified:** `Scripts/check.sh` end to end — lint clean (pre-existing Dialogs.swift warnings
-  only), generate + build OK, **104 tests / 14 suites pass** (14 new across ToolLocator,
-  InstallCommands, Registry v2/migration, Scanner import, DirectoryGrouping, URL slugs), site
-  builds (8 assets copied). Finder menus and the grouped list await the human's hands-on pass;
-  app + Finder extension restarted from the fresh Debug build for that.
-- **Landing:** PR #7 (`feature/icon-cocoon` → `dev`) is open and carries D-015–D-017, the site
-  copy, and this merge. The D-014 icon work is already in `dev` (PR #6).
-- **Blocked by:** (1) the human's Finder round trip: folder right-click → 4-item "Dormant ▸"
-  (Clean, Archive, Restore, Import Folder in Dormant); empty-space right-click → Open Directory
-  in Dormant → app opens with the directory selected and its whole-folder size shown;
-  (2) human-only GitHub settings for D-007: the `release:patch` / `release:minor` /
-  `release:major` labels and `dev` as default branch with required-PR protection.
-- **Next action (new session):** merge PR #7 once the human approves, then take the Finder
-  round-trip confirmation and the release PR from `dev` to `main` with one `release:*` label
-  (ship-release skill) → tap publish procedure → manual site deploy when the human asks. When
-  the first release ships, flip the site from "coming soon" to real download links and enable
-  the brew command copy.
+- **Phase:** 4 — launch, with a pre-release UI/distribution batch in flight.
+- **Done this session:** (0) PR #7 (D-015–D-017) and the D-014 icon work are merged into `dev`;
+  `dev` pulled. (1) **App-copy cleanup** (human-approved disposition): the Release build is
+  installed as `/Applications/Dormant.app`; the three build-artifact copies (`build/Debug`,
+  `build/Release`, DerivedData `Debug`) are deleted — `~/.dormant` untouched. (2) **Docs-first for
+  the new batch**, decisions recorded as **D-018–D-024**: Liquid Glass on a macOS 26 floor
+  (deployment target 26.0, cask `>= :tahoe`), DMG as the release artifact (supersedes the zip;
+  `Scripts/make-dmg.sh`, cask installs from the DMG), Git Clone into Folder (Finder empty space →
+  URL prompt → clone → register → open in VS Code), search + stale badges (30-day threshold),
+  savings dashboard + batch clean (explicit opt-in), auto-archive suggestions (never automatic),
+  menu-bar quick actions. `product.md` / `architecture.md` / `development.md` updated to match.
+- **In progress:** the implementation on `feature/ui-glass-batch` (toolchain gate passed: Xcode
+  27.0, 26+ SDK), following the plan in `~/.commandcode/plans/dormant-ui-glass-batch.md`.
+- **Verified:** `mdfind` + `ls` confirm exactly one `Dormant.app` (`/Applications`); the app
+  launches from there (Finder extension re-registration). Implementation checks not yet run.
+- **Blocked by:** (1) human-only GitHub settings for D-007: the `release:patch` / `release:minor`
+  / `release:major` labels (branch default is `dev` already — PR protection unknown); (2) the
+  human's hands-on Finder round trip for D-015–D-017 is assumed done (told "first two are done").
+- **Next action (new session):** finish `feature/ui-glass-batch` per the plan (UIConstants/sizing →
+  icons → glass → git clone → search/stale → dashboard/clean → menu-bar → suggestions → DMG),
+  `Scripts/check.sh` green, then push + PR → `dev`. After merge: human hands-on pass of the new UI
+  and features, then the release PR `dev` → `main` with one `release:*` label (ship-release skill)
+  → tap publish → manual site deploy when the human asks → flip the site to real download links.
 
 ---
 

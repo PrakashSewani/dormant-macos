@@ -14,14 +14,16 @@ One repository: the product and its promo site side by side.
 - `project.yml` — XcodeGen manifest (committed). `Dormant.xcodeproj` is generated and never
   committed.
 - `Scripts/check.sh` — the check command, the definition of done.
+- `Scripts/make-dmg.sh` — builds the release `Dormant-v<version>.dmg` (drag-to-Applications
+  layout) from the Release build (D-019).
 
 ## Components
 
 | Piece | Where | Responsibility |
 |---|---|---|
-| `DormantCore` | `Sources/DormantCore/` — static library, macOS 14+ | All logic: project detection and classification, size accounting, git inspection, SQLite registry, archive/restore engine, dependency-command detection. No UI. Fully unit-testable. |
-| `DormantApp` | `Sources/DormantApp/` — macOS app (accessory / `LSUIElement`, menu bar) | Menu bar item (`MenuBarExtra`), main window (project list, Project Info), preview/confirm dialogs, executes the real operations. Handles `dormant://` URLs. |
-| `DormantFinder` | `Sources/DormantFinder/` — Finder Sync appex | Inline "Dormant ▸" context submenu on project folders: Clean, Archive, Restore, Import Folder in Dormant; empty-space clicks get Open Directory in Dormant (D-017). Forwards every action to the app via `dormant://`. Never performs destructive work itself. |
+| `DormantCore` | `Sources/DormantCore/` — static library, macOS 26+ | All logic: project detection and classification, size accounting, git inspection, SQLite registry, archive/restore engine, dependency-command detection, clone engine (D-020), staleness/idle helpers (D-021/D-023). No UI. Fully unit-testable. |
+| `DormantApp` | `Sources/DormantApp/` — macOS app (accessory / `LSUIElement`, menu bar) | Menu bar item with quick actions (`MenuBarExtra`, D-024), main window (searchable project list, savings summary, Project Info), preview/confirm dialogs, executes the real operations (including git clone, D-020). Handles `dormant://` URLs. |
+| `DormantFinder` | `Sources/DormantFinder/` — Finder Sync appex | Inline "Dormant ▸" context submenu on project folders: Clean, Archive, Restore, Import Folder in Dormant; empty-space clicks get Open Directory in Dormant and Git Clone into Folder in Dormant (D-017, D-020). Forwards every action to the app via `dormant://`. Never performs destructive work itself. |
 | `site/` | `site/` — Eleventy (Nunjucks → static HTML) | The promo site: the product promise and the download link. |
 | (shared) | — | Nothing today. Product and site share no code. |
 
@@ -87,7 +89,8 @@ No copies of user source code anywhere except inside its own archive — and aft
 checksum-verified restore, not even there (the store directory is deleted; D-004).
 
 Flow: right-click in Finder → `Dormant ▸` menu (appex) → `dormant://<action>?path=<url-encoded>`
-(actions: `open`, `clean`, `archive`, `restore`, `project-info`, `open-repository`) →
+(actions: `open`, `clean`, `archive`, `restore`, `import`, `open-directory`, `git-clone`,
+`project-info`, `open-repository`) →
 app foregrounds → preview/confirm dialog → `DormantCore` operation → registry update → result.
 
 URL contract: `path` carries the selected item's file URL (`absoluteString`, percent-encoded).
@@ -131,6 +134,11 @@ plans and confirms; Core executes. `execute(plan:)` is the only removal entry po
   the archive → registry transaction (`state=active`, archive row removed) and **delete the store
   directory** (D-004) → detect install commands → show exactly what will run → run only after
   confirm.
+
+- **Git Clone:** Finder empty space → `git-clone` → dialog asks for the repository URL (validated
+  https/ssh/git@) → `git clone` into the clicked folder under the URL-derived name (D-020) →
+  register via `Scanner.register(projectAt:)` → open with `code .` (D-015). Failure shows git
+  stderr; nothing else changes.
 
 `manifest.json` (v1):
 
@@ -200,8 +208,11 @@ Shells out to `/usr/bin/git` (D-001), read-only only, `--no-optional-locks`, `-C
 - `rev-parse --is-inside-work-tree` (is a repo); `status --porcelain=v1 -uall` (`??` lines =
   untracked, every other non-empty line = modified, staged+unstaged combined); `rev-parse HEAD`;
   `rev-parse --abbrev-ref HEAD`; `remote get-url origin` (fallback: first remote from
-  `remote -v`; none → nil → Open Repository disabled).
-- Never run mutating git commands. Git missing or broken → state unknown → **warn as if dirty**.
+  `remote -v`; none → nil → Open Repository disabled); `log -1 --format=%ct` (last commit epoch,
+  for the Stale badge and idle suggestions — D-021/D-023).
+- Inspection never runs mutating git commands. The one mutating git operation in Dormant is
+  `git clone` (D-020), run only on an explicit user request with the URL the user typed.
+- Git missing or broken → state unknown → **warn as if dirty**.
 
 ## Restore install commands
 
@@ -270,7 +281,7 @@ without publishing).
 - A release PR carries exactly one `release:patch`, `release:minor`, or `release:major` label.
   On merge, release automation bumps `MARKETING_VERSION` in `project.yml`, updates
   `CHANGELOG.md`, creates the matching `v<version>` tag, and publishes a GitHub release with the
-  zipped `Dormant.app`. Without a release label, no release is published.
+  `Dormant-v<version>.dmg` artifact (D-019). Without a release label, no release is published.
 - `dev` represents ongoing unreleased work and can match `main` just after a release. Deployment
   of the product or promo site remains a deliberate manual action.
 - Required GitHub repository settings (human-only): default branch `dev`, required-PR

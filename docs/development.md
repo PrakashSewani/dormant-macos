@@ -4,7 +4,7 @@ Every command below was run on this machine (2026-09-26).
 
 ## Prerequisites
 
-- macOS 14+ (developed on macOS 27.0, Apple silicon).
+- macOS 26+ (developed on macOS 27.0, Apple silicon; deployment target 26.0 since D-018).
 - Xcode 27.0 (build 27A266a) — full Xcode, not just the Command Line Tools.
 - Homebrew; XcodeGen 2.46.0 (`brew install xcodegen`).
 - Node.js 18+ (developed on Node 24.19.0) — for the promo site only.
@@ -28,7 +28,8 @@ check command regenerates it.
 | `xcodebuild -project Dormant.xcodeproj -scheme Dormant -destination 'platform=macOS' test` | Tests only (step 4 of the check). |
 | `xcodebuild -project Dormant.xcodeproj -scheme Dormant -destination 'platform=macOS' -derivedDataPath build build` | Debug build of `Dormant.app` into `build/`. |
 | `open build/Build/Products/Debug/Dormant.app` | Run the app (menu bar item). Quit with `osascript -e 'quit app "Dormant"'`. |
-| `xcodebuild -project Dormant.xcodeproj -scheme Dormant -configuration Release -destination 'platform=macOS' -derivedDataPath build build` | Release build — the artifact `release.yml` zips. |
+| `xcodebuild -project Dormant.xcodeproj -scheme Dormant -configuration Release -destination 'platform=macOS' -derivedDataPath build build` | Release build — the input to the release DMG. |
+| `Scripts/make-dmg.sh` | Build `Dormant-v<version>.dmg` from the Release build with the drag-to-Applications layout (the artifact `release.yml` ships, D-019). |
 | `npm run build --prefix site` | Build the promo site into `site/_site/` (also step 5 of the check). |
 | `npm start --prefix site` | Eleventy dev server with live reload at <http://localhost:8080/>. |
 | `swift Scripts/render-icons.swift` | Regenerate every icon size (app icon set, site favicons) from the mark drawn in the script (D-013). |
@@ -56,7 +57,7 @@ the project-specific procedure.
 Implemented by `.github/workflows/release.yml` (reworked 2026-09-26 from the tag trigger to the
 labeled-merge flow): on merge it bumps `MARKETING_VERSION`, promotes the `[Unreleased]`
 changelog section, commits, tags `v<version>`, and publishes the GitHub release with
-`Dormant-v<version>.zip`. An unlabeled or multiply-labeled merge publishes nothing.
+`Dormant-v<version>.dmg` (D-019). An unlabeled or multiply-labeled merge publishes nothing.
 
 ## Troubleshooting
 

@@ -549,3 +549,133 @@ the sandboxed extension needs no knowledge of the registry.
 **Cost / risk:** whole-folder sizes re-walk the subtree on every refresh (computed off the main
 thread like project sizes); nested imported directories each show their own subtree size, which
 is intentional ("what does this folder eat") rather than a sum-to-total.
+
+## D-018: UI refresh — Liquid Glass on a macOS 26 floor
+
+**Date:** 2026-10-01
+
+**Context:** Pre-release UI batch ("before we publish can we work on the ui part"): the human asked
+for Liquid Glass design, icons integrated throughout the app, and minimum button sizing ("button
+uis need some min sizing they look cluttered"). Liquid Glass is the macOS 26 (Tahoe) design
+language and only exists in the 26+ SDK and on 26+ runtimes. Scope decided with the human
+2026-10-01: **macOS 26+ only** — real Liquid Glass, no dual design language.
+
+**Decision:**
+
+- **Deployment target rises from macOS 14.0 to 26.0** (`project.yml`); the Homebrew cask's
+  `depends_on` becomes `>= :tahoe`. Built with Xcode 27 (26+ SDK). This supersedes D-001's
+  deployment target; everything else in D-001 stands.
+- **Glass:** standard controls adopt Liquid Glass natively under the modern SDK; custom chrome
+  (savings summary bar, state badges, dialog headers) uses `.glassEffect` explicitly. Tasteful —
+  not every surface.
+- **Icons everywhere:** SF Symbols in the toolbar, table rows, context menus, dialogs and empty
+  states; the script-rendered brand mark (D-013/D-014) becomes the menu-bar icon via a new
+  template `Mark.imageset` emitted by `Scripts/render-icons.swift`.
+- **Sizing tokens** (`UIConstants` in `DormantApp`): minimum button width, standard control size,
+  dialog padding/spacing — fixing the cluttered buttons.
+
+**Considered and rejected:**
+
+- **macOS 14+ with availability-gated glass** — two design languages to maintain for a pre-1.0
+  utility with no installed base on older macOS.
+- **Modernize without glass** — the human explicitly asked for Liquid Glass.
+
+**Cost / risk:** pre-Tahoe macOS users cannot install (accepted by the human); CI's `macos-26`
+runners carry a 26+ SDK, so the raised target builds there.
+
+## D-019: Release artifact — DMG (supersedes the zip artifact of D-007/D-010)
+
+**Date:** 2026-10-01
+
+**Context:** The human wants installs to arrive as a DMG with the drag-to-Applications layout
+("when people do brew install i want user to get dmg file they will drag the app to application
+folder"). The release published `Dormant-v<version>.zip` and the cask unpacked the zip.
+
+**Decision:**
+
+- The GitHub release artifact becomes **`Dormant-v<version>.dmg`**, built by
+  `Scripts/make-dmg.sh` using `create-dmg` (Homebrew; build-time only) with the standard
+  drag-to-Applications window (app + `/Applications` symlink).
+- The cask `url` points at the DMG: `brew install --cask` mounts it and copies `Dormant.app` into
+  `/Applications` automatically (brew users never drag), while manual downloaders get the same
+  DMG with the drag affordance. One artifact serves both.
+- `release.yml`, the ship-release procedure/cask template, and the site download copy follow.
+
+**Considered and rejected:**
+
+- **Zip + DMG as two artifacts** — two checksums and two bump steps for no audience gain.
+- **Plain `hdiutil` DMG** (no layout) — saves a CI dependency but loses the drag affordance the
+  human asked for.
+
+**Cost / risk:** `create-dmg` is a CI/dev Homebrew dependency only; the zero-runtime-dependency
+rule (D-001) is untouched.
+
+## D-020: Git Clone into Folder — Finder empty space → prompt → clone → open in VS Code
+
+**Date:** 2026-10-01
+
+**Context:** The human's feature idea: right-click empty space in a folder in Finder → Dormant
+offers "Git Clone into Folder" → asks for the clone link → clones into that folder → opens the
+clone in VS Code automatically.
+
+**Decision:**
+
+- The Finder empty-space (container) menu gains **"Git Clone into Folder in Dormant"** beside
+  "Open Directory in Dormant", routing `dormant://git-clone?path=<folder>` (D-011/D-017 pattern —
+  the extension never does work itself).
+- The app shows a dialog asking for the repository URL (https/ssh/git@ forms, validated); the
+  clone lands in `<clicked folder>/<name derived from the URL>` (derived name shown as a preview).
+- On success: register the clone in the registry (`Scanner.register(projectAt:)`) and open it with
+  `code .` (D-015) automatically. Failure shows the git stderr in an alert; nothing else changes.
+- `CloneEngine` in `DormantCore` (pure remote-URL/name helpers + `ProcessRunner` over
+  `/usr/bin/git`), unit-tested without network.
+
+**Considered and rejected:**
+
+- **Cloning inside the sandboxed extension** — D-011: the extension only routes URLs.
+- **Pasteboard-driven, no prompt** — the human wants to be asked for the link.
+- **Asking for the target folder too** — the clicked folder is the target by definition.
+
+**Cost / risk:** cloning runs with the user's own git credentials (ssh agent / credential helper),
+exactly like terminal git; errors surface stderr verbatim.
+
+## D-021: Project list — search + stale badges
+
+**Date:** 2026-10-01
+
+**Context:** UI batch (with D-022–D-024, chosen by the human from the proposed feature list).
+
+**Decision:**
+
+- A search field filters the project list by name and path; groups with no matches hide while
+  filtering.
+- A gray **"Stale"** badge marks active projects whose last commit is older than **30 days**
+  (constant in `DormantCore`); non-repos and git-unavailable rows get no badge. `GitInspector`
+  gains `committerDate` (`git log -1 --format=%ct`), fetched in the existing off-main-thread
+  refresh pass.
+
+## D-022: Savings dashboard + batch clean (explicit, opt-in)
+
+**Date:** 2026-10-01
+
+**Decision:** A summary bar above the project list shows total reclaimable space across active
+projects ("X reclaimable across N projects"). "Clean All…" previews a per-project breakdown
+(biggest first) and, only after one explicit confirm, runs the existing per-project
+`CleanEngine` plan/execute sequentially and reports one summary. Nothing runs automatically.
+
+## D-023: Auto-archive suggestions — suggestions only, never automatic
+
+**Date:** 2026-10-01
+
+**Decision:** When active projects have been idle over **30 days** (last commit; git-unavailable
+projects excluded), a non-intrusive banner offers "Review…"; the review dialog lists candidates
+with a per-project "Archive…" that reuses the standard Archive confirm flow. Dormant never
+archives on its own (safety rules 5–6).
+
+## D-024: Menu-bar quick actions
+
+**Date:** 2026-10-01
+
+**Decision:** The menu-bar extra lists up to 10 registry projects with one-click **Open**, and
+**Restore…** for dormant ones, above the existing "Open Dormant" / "Quit". The list refreshes when
+the menu opens. Actions route through `ActionPresenter` like every other surface.
