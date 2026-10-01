@@ -222,6 +222,45 @@ struct GitCloneDialog: View {
   }
 }
 
+struct CleanAllDialog: View {
+  let report: SavingsReport
+  let onConfirm: () -> Void
+  let onCancel: () -> Void
+
+  var body: some View {
+    DialogScaffold(
+      title: "Reclaim \(Bytes.format(report.totalBytes)) across \(report.entries.count) projects?",
+      icon: "sparkles",
+      okTitle: "Clean All",
+      onConfirm: onConfirm,
+      onCancel: onCancel
+    ) {
+      VStack(alignment: .leading, spacing: 8) {
+        Text(
+          "Regenerable paths will be removed permanently — "
+            + "nothing is archived. Everything else is kept:"
+        )
+        .fixedSize(horizontal: false, vertical: true)
+        ScrollView {
+          VStack(alignment: .leading, spacing: 4) {
+            ForEach(report.entries) { entry in
+              HStack {
+                Text(entry.name)
+                Spacer()
+                Text(Bytes.format(entry.reclaimBytes)).foregroundStyle(.secondary)
+              }
+              .font(.system(.body, design: .monospaced))
+            }
+          }
+        }
+        .frame(maxHeight: 220)
+        Text("Total: \(Bytes.format(report.totalBytes))")
+          .font(.headline)
+      }
+    }
+  }
+}
+
 @MainActor
 final class InstallRunModel: ObservableObject {
   @Published var log = ""

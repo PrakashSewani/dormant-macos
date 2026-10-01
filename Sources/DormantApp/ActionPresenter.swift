@@ -85,6 +85,58 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
     }
   }
 
+  func startCleanAll(records: [ProjectRecord]) {
+    Task {
+      let report = await Task.detached { Savings.report(for: records) }.value
+      guard !report.entries.isEmpty else {
+        showAlert(
+          title: "Nothing to clean",
+          message: "No regenerable development state found in the listed projects."
+        )
+        return
+      }
+      showDialog(title: "Clean All") {
+        CleanAllDialog(
+          report: report,
+          onConfirm: {
+            self.closeDialog()
+            self.runCleanAll(entries: report.entries)
+          },
+          onCancel: { self.closeDialog() }
+        )
+      }
+    }
+  }
+
+  private func runCleanAll(entries: [SavingsReport.Entry]) {
+    Task {
+      let outcome = await Task.detached { () -> (removed: Int, reclaimed: Int, failures: Int) in
+        var removed = 0
+        var reclaimed = 0
+        var failures = 0
+        for entry in entries {
+          let engine = CleanEngine()
+          let plan = engine.plan(root: URL(fileURLWithPath: entry.path))
+          let result = engine.execute(plan: plan)
+          removed += result.removed.count
+          failures += result.failures.count
+          reclaimed += plan.items
+            .filter { result.removed.contains($0.relativePath) }
+            .reduce(0) { $0 + $1.sizeBytes }
+        }
+        return (removed, reclaimed, failures)
+      }.value
+      NotificationCenter.default.post(name: .dormantDataChanged, object: nil)
+      var message =
+        "Removed \(outcome.removed) regenerable path(s), reclaiming "
+        + "\(Bytes.format(outcome.reclaimed))."
+      if outcome.failures > 0 {
+        message += "\n\(outcome.failures) path(s) were left in place."
+      }
+      showAlert(title: "Clean All finished", message: message)
+    }
+  }
+
   private func startArchive(_ root: URL) {
     Task {
       let record = await Task.detached { () -> ProjectRecord? in

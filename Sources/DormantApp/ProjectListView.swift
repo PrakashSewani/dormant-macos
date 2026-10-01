@@ -22,6 +22,7 @@ final class ProjectListModel: ObservableObject {
   @Published private(set) var projects: [ProjectRecord] = []
   @Published private(set) var sizeTexts: [String: String] = [:]
   @Published private(set) var staleIDs: Set<String> = []
+  @Published private(set) var savings: SavingsReport?
 
   func refresh() {
     var projectRows: [ProjectRecord] = []
@@ -33,6 +34,7 @@ final class ProjectListModel: ObservableObject {
     projects = projectRows
     rows = Self.buildRows(directories: directoryRows, projects: projectRows)
     computeSizes()
+    computeSavings()
   }
 
   func scan(roots: [URL]) {
@@ -136,6 +138,14 @@ final class ProjectListModel: ObservableObject {
   private static func flatten(_ rows: [ProjectRow]) -> [ProjectRow] {
     rows + rows.flatMap { flatten($0.children ?? []) }
   }
+
+  private func computeSavings() {
+    let records = projects
+    Task {
+      let report = await Task.detached { Savings.report(for: records) }.value
+      savings = report
+    }
+  }
 }
 
 struct ProjectListView: View {
@@ -166,6 +176,25 @@ struct ProjectListView: View {
 
   var body: some View {
     VStack(spacing: 0) {
+      if let savings = model.savings, !savings.entries.isEmpty {
+        HStack(spacing: UIConstants.buttonSpacing) {
+          Label(
+            "\(Bytes.format(savings.totalBytes)) reclaimable across "
+              + "\(savings.entries.count) projects",
+            systemImage: "internaldrive"
+          )
+          .font(.callout)
+          Spacer()
+          Button("Clean All…", systemImage: "sparkles") {
+            ActionPresenter.shared.startCleanAll(records: model.projects)
+          }
+          .frame(minWidth: UIConstants.toolbarButtonMinWidth)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+        .padding(12)
+      }
       if model.rows.isEmpty {
         VStack(spacing: 12) {
           Image(systemName: "folder.badge.questionmark")
