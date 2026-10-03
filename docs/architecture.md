@@ -294,6 +294,9 @@ without publishing).
   Cloudflare Workers Builds (D-025).
 - Required GitHub repository settings (human-only): default branch `dev`, required-PR
   protections for `dev` and `main`, and the three `release:*` labels.
+- `.github/CODEOWNERS` names @PrakashSewani the default owner of every path, so pull requests
+  request that review automatically; *requiring* code-owner review is a human-only
+  branch-protection toggle.
 
 ## Scaffold spec (phase 1)
 
