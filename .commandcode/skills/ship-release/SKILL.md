@@ -25,7 +25,9 @@ metadata:
 ## Procedure
 
 Recorded at bootstrap (2026-09-26); updated 2026-09-26 for the labeled-release policy
-(`docs/decisions.md` D-007). Stack: Swift/Xcode, XcodeGen (`docs/decisions.md` D-001).
+(`docs/decisions.md` D-007); updated 2026-10-03 for automatic Finder-extension enablement
+(D-026) and the post-release back-merge (step 7). Stack: Swift/Xcode, XcodeGen
+(`docs/decisions.md` D-001).
 
 **Version source of truth:** `MARKETING_VERSION` in `project.yml`. A release tag is `v<version>`
 and must match it exactly.
@@ -42,7 +44,8 @@ Release (cut only when the human asks):
    -destination 'platform=macOS' -derivedDataPath build build`) packaged by
    `Scripts/make-dmg.sh` (`create-dmg`, drag-to-Applications layout) into `build/`.
 4. Verify: `gh run watch`, the release page, and a launch smoke of the downloaded DMG (mount,
-   drag or `brew install --cask`, launch).
+   drag or `brew install --cask`, launch — the app enables its Finder extension itself on first
+   launch, D-026).
 5. Promo site: **auto-deploys from `dev`** (D-025) — Cloudflare Workers Builds (service
    `dormant-macos`, <https://dormant.prakashsewani.com>) builds `site/` and deploys on every
    merge into `dev`. No manual publish; never hand-deploy over the Git-connected service. The
@@ -58,9 +61,12 @@ Release (cut only when the human asks):
       `version "<version>"` and `sha256 "<the shasum>"` in `Casks/dormant.rb` (first release:
       create the file from the template below), commit `dormant <version>`, push to `main`.
    4. Verify: `brew update && brew install --cask PrakashSewani/tap/dormant`, launch smoke
-      (approve "Open Anyway", enable the Finder extension). On an existing install:
-      `brew upgrade --cask dormant`. Uninstall safety check: `brew uninstall --cask dormant`
-      must leave `~/.dormant` (registry + archives) untouched.
+      (approve "Open Anyway"; the Finder extension enables itself, D-026). On an existing
+      install: `brew upgrade --cask dormant`. Uninstall safety check:
+      `brew uninstall --cask dormant` must leave `~/.dormant` (registry + archives) untouched.
+7. Back-merge `main` into `dev` (PR) right after the release so `MARKETING_VERSION` and the
+   promoted `CHANGELOG.md` stay aligned; skipping it broke the v0.2.0 prep — the new entry
+   anchored into the shipped section and the release notes would have come out empty.
 
 Cask template — `Casks/dormant.rb` in `PrakashSewani/homebrew-tap` (D-010: never `zap`
 `~/.dormant`, it holds the project registry and the archive store = user source code):
@@ -83,8 +89,9 @@ cask "dormant" do
     Dormant is ad-hoc signed (no Apple Developer Program — docs/decisions.md D-001/D-010).
     On first launch macOS blocks it: open System Settings → Privacy & Security, click
     "Open Anyway", then launch Dormant again.
-    Then enable the Finder extension in System Settings → Extensions (Finder Extensions)
-    and relaunch Finder for the "Dormant ▸" context menu.
+    The Finder extension is enabled automatically on first launch; if it cannot be, Dormant
+    offers a button that opens the right System Settings pane. Allow a moment (or restart
+    Finder) for the "Dormant ▸" context menu to appear.
   EOS
 
   zap trash: "~/Library/Preferences/com.dormant.Dormant.plist"

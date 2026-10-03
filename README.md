@@ -8,27 +8,26 @@ be regenerated. Keep what matters. Put unused projects to sleep. Wake them when 
 
 ## Install
 
-Once a release is published (nothing is released yet):
-
 ```bash
 brew tap PrakashSewani/tap
 brew install --cask dormant
 ```
 
-Or download `Dormant-v<version>.zip` from the
+Or download the latest `Dormant-v<version>.dmg` from the
 [Releases page](https://github.com/PrakashSewani/dormant-macos/releases).
 
 First launch: Dormant is ad-hoc signed (no Apple Developer Program), so macOS blocks it once.
-Open System Settings → Privacy & Security, click "Open Anyway", and launch Dormant again. Then
-enable the Finder extension in System Settings → Extensions (Finder Extensions) and relaunch
-Finder for the "Dormant ▸" context menu.
+Open System Settings → Privacy & Security, click "Open Anyway", and launch Dormant again. On that
+first launch Dormant enables its Finder extension by itself; if it cannot, it offers a button
+that opens the right System Settings pane — allow a moment (or restart Finder) for the
+"Dormant ▸" context menu to appear.
 
 ## What it does
 
 From the Finder "Dormant ▸" context menu on a project folder (and the menu bar app):
 
-- **Open** — launch the project in your configured editor command (falls back to opening the
-  folder).
+- **Open** — open the project in VS Code (`code .`); a missing `code` command is a hard error,
+  never a Finder fallback (D-015).
 - **Clean** — remove regenerable development state (`node_modules`, `target`, `.venv`, build
   output, caches) after a preview with per-path sizes. Never removes anything it cannot
   confidently classify as regenerable.
@@ -46,8 +45,8 @@ Local-first: no accounts, no telemetry, nothing leaves your Mac. The full brief 
 
 ## Status
 
-Phases 0–3 (docs, scaffold, core workflow, promo site) are implemented and tested; nothing is
-released yet. The current phase and handoff live in [`docs/status.md`](docs/status.md).
+Dormant is released: install via the Homebrew tap or download the DMG from the Releases page.
+The current phase and handoff live in [`docs/status.md`](docs/status.md).
 
 ## Development
 
