@@ -715,3 +715,54 @@ Cloudflare setup.
 **Cost / risk:** a broken build on `dev` leaves the site on its previous copy (fails safe); the
 cosmetic preview-check noise stays until the human disconnects or reconfigures preview builds in
 the Cloudflare dashboard (human-only).
+
+## D-026: Finder extension enablement — automatic on first launch via pluginkit
+
+**Date:** 2026-10-03
+
+**Context:** The Finder "Dormant ▸" menu only exists after the extension's user election is set;
+today that is the one-time System Settings enable in D-011's cost/risk, a step users can miss
+right after install — and Apple's UI for it has been moved (Sequoia removed the Finder Sync pane
+for a while; restored in 15.2+). The human wants the Finder actions "usable right off the
+installation" (2026-10-03). Investigated live on macOS 27.2: `pluginkit` — a documented system
+tool (`man pluginkit`, System Manager's Manual; `-e use|ignore|default`) — flips the election
+silently. Verified with a disposable copy of the shipping appex under a test identifier,
+signed exactly like release builds (ad-hoc, sandboxed): `pluginkit -e use -i <id>` sets the state
+to enabled (`+` in `pluginkit -m`), no System Settings trip, no signing change. The private
+`NSExtension` class some apps use is not needed.
+
+**Decision:**
+
+- `DormantApp` attempts to enable `com.dormant.Dormant.Finder` until it first observes the
+  extension enabled: `pluginkit -a` on the embedded appex (best-effort registration), then
+  `pluginkit -e use -i com.dormant.Dormant.Finder`, then re-query (`pluginkit -m -i …`; `+` =
+  enabled). The attempt runs at launch — the appex only becomes discoverable once the app has
+  been launched/registered, and the user must launch the app once anyway for the Gatekeeper
+  approval (D-010). A brew postflight cannot: at install time the quarantined app is neither
+  approved nor discovered.
+- First time the attempt flips the extension on, one informational alert tells the user the
+  Finder menu is ready. If the attempt fails, a fallback alert offers "Open System Settings"
+  (deep link to General → Login Items & Extensions) with instructions; the app quietly retries
+  on the next launch and never nags more than once.
+- Once the extension has been observed enabled (by Dormant or manually), the app stops electing
+  — a later user "off" in System Settings is respected. A menu-bar item ("Enable Finder
+  Extension", shown only while the extension is not enabled) re-runs the same path on demand.
+- `FinderExtension` lives in `DormantCore` (election + state parsing over `ProcessRunner`),
+  unit-tested against canned real `pluginkit` output; no new runtime dependency.
+
+**Considered and rejected:**
+
+- **Private `NSExtension` API** — private API, unnecessary while the documented CLI works.
+- **Cask postflight enable at install time** — runs before the app has launched/been approved;
+  the appex is not yet discoverable, so the election has nothing to attach to.
+- **Silent re-enable on every launch** — would fight a user who deliberately disabled the
+  extension; one-time-until-success plus a manual menu item instead.
+- **Developer ID + notarization** — does not remove the extension-enable step (even notarized
+  sync apps ask or elect); only the separate Gatekeeper first-launch friction, already accepted
+  and out of scope per D-001/D-010.
+
+**Cost / risk:** `pluginkit`'s man page frames interventions as "for debugging and development",
+so Apple could require UI consent in a future macOS — the feature then degrades to the fallback
+dialog (no ban/revocation vector: not App Store distributed, election is user-visible and
+revocable). Finder may show the submenu only after a relaunch in some cases; the success alert
+mentions restarting Finder, and the menu-bar item re-runs enablement on demand.

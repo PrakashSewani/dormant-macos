@@ -34,6 +34,12 @@ One repository: the product and its promo site side by side.
   (D-011): `DormantFinder` carries App Sandbox
   (`Sources/DormantFinder/DormantFinder.entitlements`) because macOS loads no non-sandboxed app
   plugin; `DormantApp` / `DormantCore` have none (must operate on arbitrary folders).
+- Finder extension enablement (D-026): at each launch until the extension is first observed
+  enabled, the app registers its embedded appex (`pluginkit -a`) and elects it
+  (`pluginkit -e use -i com.dormant.Dormant.Finder`), verifying via `pluginkit -m` (`+` =
+  enabled); a failed attempt offers a System Settings deep link, and the menu bar shows
+  "Enable Finder Extension" while the extension is disabled. `FinderExtension` (DormantCore)
+  wraps this over `ProcessRunner`.
 
 ## Data flow
 
@@ -249,7 +255,8 @@ run in the project root, sequentially:
 ## Shared plumbing
 
 `ProcessRunner` (Process wrapper: argv, cwd, env, captured stdout/stderr, exit code,
-cancellation), `ToolLocator` (hardcoded lookup of external executables — D-015), `Checksums`
+cancellation), `ToolLocator` (hardcoded lookup of external executables — D-015),
+`FinderExtension` (Finder Sync election state + enable via `pluginkit` — D-026), `Checksums`
 (SHA-256 via system CryptoKit), `DormantError` taxonomy (`notAProject`,
 `gitUnavailable`, `archiveExists`, `targetNotEmpty`, `tarFailed(stderr)`,
 `verificationFailed(details)`, `registryFailure`, `installCommandFailed(cmd, status, stderr)`).

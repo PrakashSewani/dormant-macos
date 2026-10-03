@@ -31,7 +31,9 @@ cycle explicit, safe, and reversible.
 
 Available from the app itself; the Finder right-click "Dormant ▸" hover submenu carries Clean,
 Archive, Restore, and Import Folder in Dormant on a folder, and Open Directory in Dormant on
-empty space (D-016, D-017):
+empty space (D-016, D-017). The Finder extension is enabled automatically on the app's first
+launch — no System Settings trip — with a System Settings fallback when that fails and a
+menu-bar re-enable action (D-026):
 
 - **Open** (app) — open the project in VS Code (`code .`, hardcoded — D-015 supersedes D-006).
   If `code` is not found, Dormant reports an error; it never falls back to opening Finder.
