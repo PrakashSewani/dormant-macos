@@ -32,4 +32,24 @@
       <p class="footer-fine">macOS 26 or later. Free.</p>
     </footer>
   </body>
+  <script>
+    document.querySelectorAll(".install-line").forEach(function (line) {
+      var code = line.querySelector("code");
+      if (!code) return;
+      function copy() {
+        navigator.clipboard.writeText(code.textContent.trim()).then(function () {
+          var original = code.textContent;
+          code.textContent = "Copied!";
+          setTimeout(function () { code.textContent = original; }, 1000);
+        });
+      }
+      line.addEventListener("click", copy);
+      line.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          copy();
+        }
+      });
+    });
+  </script>
 </html>

@@ -15,23 +15,30 @@ rule 4. Keep exactly one phase `in progress`.
 
 ## Current handoff
 
-- **Phase:** 4 — launch; cutting the first release **v0.1.0**.
-- **Done this session:** (0) Release labels `release:patch` / `release:minor` / `release:major`
-  created on GitHub (D-007 unblocked). (1) Prep PR #9: `MARKETING_VERSION` 0.1.0 → 0.0.9 so the
-  labeled bump lands the first release exactly on 0.1.0. (2) Release PR #10 merged with
-  `release:patch` — by the bump arithmetic that cut **v0.0.10** (patch increments the last
-  segment), wrong per the human's explicit v0.1.0 decision. Yanked on the spot: release and tag
-  deleted, the `Release v0.0.10` commit reverted on `main` (PR #11, no release label = no
-  publish). Nothing consumed v0.0.10 (tap and site were still untouched). (3) This update rides
-  the redo: release PR `dev` → `main` with `release:minor` (0.0.9 → **0.1.0**).
-- **Verified:** CI `check` green on PRs #9, #10, #11. The release workflow ran end to end on the
-  v0.0.10 attempt (bump → changelog → tag → Release build + DMG → GitHub release, 1m55s) — the
-  pipeline itself is proven.
-- **Blocked by:** nothing.
-- **Next action:** merge the `release:minor` release PR (v0.1.0) → publish `Casks/dormant.rb` to
-  `PrakashSewani/homebrew-tap` (ship-release skill step 6) → flip the site copy from "coming
-  soon" to the real download link + enable the brew command copy (branch/PR into `dev`,
-  auto-deploys) → final status.md + `brew install --cask` smoke.
+- **Phase:** 4 — launch; **v0.1.0 is published** (tag + GitHub release + Homebrew tap) and the
+  site carries the download links.
+- **Prior (launch prep):** release labels created, the mis-tagged v0.0.10 yanked, v0.1.0 cut via
+  PR #13, tap published and brew verified end to end, site flipped to real download links
+  (PRs #14–15).
+- **Done this session (2026-10-03):** Finder extension auto-enablement (D-026) — the app elects
+  `com.dormant.Dormant.Finder` at launch until first observed enabled (documented `pluginkit -e
+  use`, embedded appex registered best-effort), shows a one-time success alert, falls back to a
+  System Settings deep-link dialog when it cannot enable (quiet retry on later launches, one
+  prompt ever), and the menu bar shows "Enable Finder Extension" while the extension is
+  disabled; `FinderExtension` in `DormantCore` with parser/command tests; docs updated (D-026,
+  product, architecture).
+- **Verified:** `Scripts/check.sh` green — lint, generate + build, **128 tests / 19 suites
+  pass** (was 123 / 18), site build. Live end-to-end on macOS 27.2: `pluginkit -e ignore` +
+  UserDefaults flags cleared (fresh-install simulation) → debug build launched → extension back
+  to `+` and `finderExtension.autoEnabled` written; the debug plugin registration was removed
+  afterwards and the `/Applications` copy left enabled; the fallback deep link opens System
+  Settings.
+- **Blocked by:** human-only launch smoke — first launch of the brew-installed app (Gatekeeper
+  → Privacy & Security → "Open Anyway") and a visual pass: the success alert, the deep-link
+  pane, and the "Dormant ▸" menu after auto-enable; the UI batch's hands-on pass also remains
+  open.
+- **Next action:** review + merge this PR (green check) → D-026 ships with the next release;
+  then the human smoke pass → mark Phase 4 complete.
 
 ---
 

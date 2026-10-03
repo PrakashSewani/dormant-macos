@@ -44,6 +44,45 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
     }
   }
 
+  func setUpFinderExtensionIfNeeded() {
+    let defaults = UserDefaults.standard
+    guard !defaults.bool(forKey: Self.finderExtensionKey) else { return }
+    let appex = Self.finderExtensionAppex
+    Task {
+      let outcome = await Task.detached {
+        () -> (wasEnabled: Bool, state: FinderExtensionState) in
+        let finder = FinderExtension()
+        let wasEnabled = finder.state() == .enabled
+        guard !wasEnabled else { return (true, .enabled) }
+        return (false, finder.enable(appex: appex))
+      }.value
+      guard outcome.state == .enabled else {
+        if !defaults.bool(forKey: Self.finderExtensionFallbackKey) {
+          defaults.set(true, forKey: Self.finderExtensionFallbackKey)
+          showFinderExtensionFallback()
+        }
+        return
+      }
+      defaults.set(true, forKey: Self.finderExtensionKey)
+      if !outcome.wasEnabled {
+        showFinderExtensionEnabled()
+      }
+    }
+  }
+
+  func enableFinderExtension() {
+    let appex = Self.finderExtensionAppex
+    Task {
+      let state = await Task.detached { FinderExtension().enable(appex: appex) }.value
+      guard state == .enabled else {
+        showFinderExtensionFallback()
+        return
+      }
+      UserDefaults.standard.set(true, forKey: Self.finderExtensionKey)
+      showFinderExtensionEnabled()
+    }
+  }
+
   private func startClean(_ root: URL) {
     Task {
       _ = await resolveRecord(for: root)
@@ -484,5 +523,39 @@ final class ActionPresenter: NSObject, NSWindowDelegate {
     alert.informativeText = message
     alert.addButton(withTitle: "OK")
     alert.runModal()
+  }
+
+  private static let finderExtensionKey = "finderExtension.autoEnabled"
+  private static let finderExtensionFallbackKey = "finderExtension.fallbackShown"
+
+  private static var finderExtensionAppex: URL? {
+    Bundle.main.builtInPlugInsURL?.appendingPathComponent("DormantFinder.appex")
+  }
+
+  private func showFinderExtensionEnabled() {
+    showAlert(
+      title: "Finder extension enabled",
+      message: "Right-click any folder in Finder for Dormant actions — Clean, Archive, "
+        + "Restore, and more. If the \"Dormant ▸\" submenu does not appear right away, "
+        + "restart Finder.")
+  }
+
+  private func showFinderExtensionFallback() {
+    let alert = NSAlert()
+    alert.alertStyle = .warning
+    alert.messageText = "Enable the Finder extension in System Settings"
+    alert.informativeText =
+      "Dormant could not turn on its Finder extension. Open System Settings → General → "
+      + "Login Items & Extensions, enable Dormant under Finder extensions, then restart "
+      + "Finder. Dormant keeps trying on its own."
+    alert.addButton(withTitle: "Open System Settings")
+    alert.addButton(withTitle: "Later")
+    if alert.runModal() == .alertFirstButtonReturn,
+      let settings = URL(
+        string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension"
+          + "?extensionPointIdentifier=com.apple.FinderSync")
+    {
+      NSWorkspace.shared.open(settings)
+    }
   }
 }
