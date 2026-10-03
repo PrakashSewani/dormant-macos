@@ -2,6 +2,10 @@ import AppKit
 import DormantCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+  func applicationDidFinishLaunching(_ notification: Notification) {
+    ActionPresenter.shared.setUpFinderExtensionIfNeeded()
+  }
+
   func application(_ application: NSApplication, open urls: [URL]) {
     for url in urls {
       guard let parsed = DormantURL.parse(url) else { continue }

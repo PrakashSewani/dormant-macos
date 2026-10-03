@@ -8,6 +8,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ### Added
 
+- Finder extension enablement: Dormant turns its Finder extension on automatically at first
+  launch (documented `pluginkit` election — no System Settings trip), with a System Settings
+  fallback dialog and an "Enable Finder Extension" menu-bar action when it cannot (D-026).
 - Git Clone into Folder in Dormant (Finder empty-space right-click): Dormant asks for the
   repository URL, clones into the clicked folder, registers the clone, and opens it in VS Code
   (D-020).

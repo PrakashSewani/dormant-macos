@@ -5,6 +5,7 @@ import SwiftUI
 struct MenuBarContentView: View {
   @Environment(\.openWindow) private var openWindow
   @State private var projects: [ProjectRecord] = []
+  @State private var finderExtensionState: FinderExtensionState?
 
   var body: some View {
     Group {
@@ -28,6 +29,12 @@ struct MenuBarContentView: View {
         }
       }
       Divider()
+      if finderExtensionState == .disabled {
+        Button("Enable Finder Extension") {
+          ActionPresenter.shared.enableFinderExtension()
+        }
+        Divider()
+      }
       Button("Open Dormant") {
         openWindow(id: "main")
         NSApp.activate()
@@ -39,6 +46,9 @@ struct MenuBarContentView: View {
     }
     .onAppear {
       projects = Self.load()
+      Task {
+        finderExtensionState = await Task.detached { FinderExtension().state() }.value
+      }
     }
   }
 
