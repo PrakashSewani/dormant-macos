@@ -15,30 +15,22 @@ rule 4. Keep exactly one phase `in progress`.
 
 ## Current handoff
 
-- **Phase:** 4 — launch; **v0.1.0 is published** (tag + GitHub release + Homebrew tap) and the
-  site carries the download links.
-- **Prior (launch prep):** release labels created, the mis-tagged v0.0.10 yanked, v0.1.0 cut via
-  PR #13, tap published and brew verified end to end, site flipped to real download links
-  (PRs #14–15).
-- **Done this session (2026-10-03):** Finder extension auto-enablement (D-026) — the app elects
-  `com.dormant.Dormant.Finder` at launch until first observed enabled (documented `pluginkit -e
-  use`, embedded appex registered best-effort), shows a one-time success alert, falls back to a
-  System Settings deep-link dialog when it cannot enable (quiet retry on later launches, one
-  prompt ever), and the menu bar shows "Enable Finder Extension" while the extension is
-  disabled; `FinderExtension` in `DormantCore` with parser/command tests; docs updated (D-026,
-  product, architecture).
-- **Verified:** `Scripts/check.sh` green — lint, generate + build, **128 tests / 19 suites
-  pass** (was 123 / 18), site build. Live end-to-end on macOS 27.2: `pluginkit -e ignore` +
-  UserDefaults flags cleared (fresh-install simulation) → debug build launched → extension back
-  to `+` and `finderExtension.autoEnabled` written; the debug plugin registration was removed
-  afterwards and the `/Applications` copy left enabled; the fallback deep link opens System
-  Settings.
-- **Blocked by:** human-only launch smoke — first launch of the brew-installed app (Gatekeeper
-  → Privacy & Security → "Open Anyway") and a visual pass: the success alert, the deep-link
-  pane, and the "Dormant ▸" menu after auto-enable; the UI batch's hands-on pass also remains
-  open.
-- **Next action:** review + merge this PR (green check) → D-026 ships with the next release;
-  then the human smoke pass → mark Phase 4 complete.
+- **Phase:** 4 — launch; **v0.2.0 is published** (2026-10-03: tag + GitHub release with
+  `Dormant-v0.2.0.dmg`, Homebrew tap bumped and brew-verified, site download links live).
+- **Done this session (2026-10-03):** D-026 Finder-extension auto-enablement (feature PR #16),
+  then the v0.2.0 release: prep PR #17 (first back-merge of `main` into `dev`, CHANGELOG
+  realigned, README/skill/development copy refreshed), release PR #18 (`release:minor` →
+  workflow cut v0.2.0 with the D-026 note), tap commit `dormant 0.2.0` (version + sha256 +
+  caveats/README), site PR #19 (DMG links → v0.2.0), and this back-merge PR.
+- **Verified:** `Scripts/check.sh` green on the feature and both prep/site PRs; `check` CI green
+  on #16–#19; release workflow green (1m29s) with release notes = the D-026 entry. DMG smoke:
+  mount, app version 0.2.0, launch/quit OK. Tap: `brew upgrade --cask dormant` 0.1.0 → 0.2.0,
+  uninstall leaves `~/.dormant` intact, reinstall 0.2.0. Live site serves v0.2.0 links (~50s
+  after merge).
+- **Blocked by:** human-only first launch of the 0.2.0 build — Gatekeeper "Open Anyway" (the new
+  ad-hoc signature is quarantined again), then the "Dormant ▸" menu; the UI batch's hands-on
+  pass also remains open.
+- **Next action:** human smoke pass on 0.2.0 → mark Phase 4 complete.
 
 ---
 
