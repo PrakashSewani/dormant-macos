@@ -1,0 +1,69 @@
+name: Mirror to GHCR
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Dormant version to mirror (e.g. 0.2.0)"
+        required: true
+  workflow_call:
+    inputs:
+      version:
+        description: "Dormant version to mirror"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: ghcr.io/prakashsewani/dormant
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oras-project/setup-oras@v1
+      - name: Fetch the DMG and record its checksum
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          gh release download "v${VERSION}" --repo "${GITHUB_REPOSITORY}" \
+            --pattern "*.dmg" --dir dist
+          test -f "dist/Dormant-v${VERSION}.dmg"
+          cd dist
+          sha256sum "./Dormant-v${VERSION}.dmg" > SHA256SUMS
+          cat SHA256SUMS
+      - name: Push as an OCI artifact
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+          oras push "${IMAGE}:${VERSION}" \
+            --artifact-type application/vnd.dormant.release.v1 \
+            --annotation "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+            --annotation "org.opencontainers.image.version=${VERSION}" \
+            --annotation "org.opencontainers.image.title=Dormant v${VERSION}" \
+            "dist/Dormant-v${VERSION}.dmg:application/x-apple-diskimage" \
+            "dist/SHA256SUMS:text/plain"
+          oras tag "${IMAGE}:${VERSION}" latest
+          oras manifest fetch "${IMAGE}:${VERSION}" | head -c 400; echo
+      - name: Make the package public
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          # GHCR packages start private; this flips it so the DMG mirror is
+          # visible on the profile and pullable by anyone with a gh token.
+          gh api --method PATCH "/user/packages/container/dormant" \
+            -f visibility=public --jq '{name, visibility}' \
+            || echo "::warning::Could not flip visibility — set it by hand in the package settings."

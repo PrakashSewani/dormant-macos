@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 concurrency:
   group: release
@@ -16,6 +17,8 @@ jobs:
   release:
     if: github.event.pull_request.merged == true
     runs-on: macos-26
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Determine release label
         id: label
@@ -111,3 +114,14 @@ jobs:
             "build/Dormant-v$version.dmg" \
             --title "Dormant v$version" \
             --notes-file release-notes.md
+
+  mirror-to-ghcr:
+    needs: release
+    if: needs.release.outputs.version != ''
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/publish-ghcr.yml
+    with:
+      version: ${{ needs.release.outputs.version }}
+
